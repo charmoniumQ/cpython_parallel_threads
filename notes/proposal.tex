@@ -1,0 +1,183 @@
+\documentclass[sigconf,screen,nonacm,natbib]{acmart}
+
+\bibliographystyle{acm}
+
+\citestyle{acmnumeric}
+
+\newcommand{\todo}[1]{\textcolor{red}{#1}}
+
+\title{Shared Huge Pages with a Memory Allocator to Avoid Fragmentation}
+
+\author{Samuel Grayson}
+
+\setcopyright{none}
+
+\begin{abstract}
+  Huge pages present certain advantages, but they have some problems with page fragmentation.
+  The OS can allocate a huge page to a group of processes which trust each other as long as each of the processes agree to use non-overlapping ranges.
+  This mitigates some of the problems with huge pages while offering some advantages of its own.
+
+  I want to formalize this idea, develop measurement tools to see if it is worth pursuing, and---time permitting---implement it.
+\end{abstract}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+
+Memory-allocation has two regimes:
+
+\begin{enumerate}
+\item Intrapage memory-allocation allocates variable size ranges to a specific process
+\item Interpage memory-allocation allocates fixed-sized pages to each process
+\end{enumerate}
+
+Thus interpage memory-allocation has much greater problems with internal fragmentation (many partly filled pages) and external fragmentation (no contiguous unused space big enough for a whole page).
+These problems is only worsened if huge pages are utilized.
+However, huge pages have desirable characteristics: the same TLB maps more physical memory, resulting in fewer page walks.
+
+I want to create a group-malloc combining these techniques, where multiple processes share a huge page and allocate memory from it using intrapage memory allocation.
+This has the benefits of both: It has the logical niceties a variable-size range (minimal fragmentation), but physical simplicity (minimal TLB misses) of a huge page.
+This behavior can be selectively enabled at runtime without source-code change, and traditional share-nothing processes would have unchanged performance.
+
+\section{How Sharing Pages Could Work}
+
+The user could tells the OS to execute a group of tasks with sharing with a syscall like exec.
+Then the OS would allocate a huge page for the group and initialize a memory-allocator (\texttt{grmalloc()}) on it.
+When the process calls \texttt{malloc()}, the memory could come out of this shared page.
+\footnote{POSIX does not require that successive calls to \texttt{malloc()} be contiguous,\cite{posix-malloc} and glibc already breaks this anyway.\cite{man-malloc}}
+The book-keeping required for memory-allocation grows with the logarithm of the memory being operated on, so having one memory-bank twice as large is better than having two regular-sized ones.
+The other program segments can be shared in the following way:
+
+\begin{enumerate}
+\item
+  Sharing the data segment (both initialized and uninitialized) is straightforward: call \texttt{grmalloc()} and load the data there.
+  \footnote{The OS should not attempt this optimization for software that uses non-standard system-defined pointers such as etext, edata, and end\citep{end}.}
+\item
+  Sharing the text segment is mostly straightforward with one complication: absolute branch addresses.
+  At load-time, these would have to be rewritten to be the address plus the ranges offset.
+  In a production system, this could be done easily in hardware without the need for software rewriting.
+\item
+  Sharing the heap is somewhat complicated. I divide this into three cases:
+  \begin{enumerate}
+  \item
+    If a program uses libc's \texttt{malloc()}, then is straightforward: proxy to \texttt{grmalloc()}.
+  \item
+    If a program uses \texttt{mmap()} to create an `anonymous mapping' significantly smaller than a page, then this is straightforward. Otherwise, it is best to allocate a set of entire pages. With huge pages, this case will be rare.
+  \item
+    If a program uses \texttt{brk()}, \texttt{sbrk()}, or other memory primitives directly, the OS should not attempt this optimization.
+  \end{enumerate}
+\item
+  Sharing the stack is less reliable.
+  If the OS could know that the stack would not grow beyond a certain size (this could be inferred from prior runs), then the OS could allocate a range for the stack.
+\end{enumerate}
+
+All of these optimizations are independent, so they can be implemented progressively, maintaining correctness along the way.
+
+In order to limit the scope to something feasible, I will assume a uniprocessor system.
+In a multithreaded case, \texttt{grmalloc} would need to either use a lock or atomics.
+This work is still relevant because it either proves the unfeasibility of the idea in the simplest-case or it gives us an expectation to strive for in a world.
+
+\section{Costs and benefits}
+
+\subsection{Pros}
+\begin{enumerate}
+\item Huge pages give a greater TLB reach which minimizes TLB misses.
+\item When context-switching to another process in the shared group, the kernel does not have to flush the TLB.
+\end{enumerate}
+
+Pro 2 is especially important for processes that trade off control at a high-frequency, common in patterns such as the actor model, communicating sequential processes, and threads with locks.
+
+\subsection{Cons}
+\begin{enumerate}
+\item Shared huge pages could still suffer from some memory fragmentation (both internal and external), although this problem is less drastic than in traditional huge pages.
+\item Sharing gives less isolation against invalid memory accesses.
+\item Individual processes might use more pages because they get less of each page.
+  This is mitigated by having larger pages in general.
+  If there are \(n\) processes in a group, then the pages should be more than \(n\) times larger to see beneficial TLB performance.
+\end{enumerate}
+
+Con 2 is a valid flaw, but there are situations where its impact is low:
+\begin{enumerate}
+\item In containers and VMs, applications commonly run as root because they are sandboxed.
+\item High-level languages that do not have manual memory management do not suffer from this class of bugs.
+\item High-performance computing where access is already strictly controlled.
+\item Applications or application-suites that use multiple processes written by the same vendor or individual might trust each other.
+\end{enumerate}
+
+\section{Prior Work}
+
+This idea is similar to multithreading, where processes share a virtual-address space. However unlike threads sharing processes do not need to know that they are sharing a virtual-address space; they won't modify each others data because  a correct program cannot to derive a pointer to memory it did not allocate.
+
+This idea is similar to using \texttt{mmap()} to create shared pages, but again the programs don't have to be written with this optimization in mind. Shared huge pages could share more than just the range allocated by \texttt{mmap()}; they could share the data and text segments as well.
+
+This idea is similar to single address-space OSes like Opal\cite{opal} and Nemesis, but shared huge pages can coexist with traditional processes that want their own memory space. It can easily be built into a POSIX OS, so many apps can run with the optimization without modification.
+
+\section{Applications}
+
+I am not sure which OS I will target, but it should already supports mixed page-sizes to support shared huge pages.
+
+I am not sure which applications to target, but the ideal conditions are:
+\begin{enumerate}
+\item applications that have sporadic memory accesses (sporadic even at the granularity of a 4k page)
+\item applications that have processes that trade off control at a high frequency
+\item possibly inside a virtual machine
+\end{enumerate}
+
+Other literature uses traditional benchmarks (SPEC CPU, PARSEC 3.0), machine learning workloads (MapReduce web search, Spark MovieRecmd), or database workloads (Redis, MongoDB). \cite{ingens}
+
+\section{Methodology}
+
+First I would attempt to predict how big of a problem this is and how much room is there for improvement.
+
+This will probably involve creating tools to get real-world measurements on existing systems (not modifying the OS yet).
+
+Then if the numbers are promising, I will implement a part of this optimization. Which part (\texttt{malloc} vs memory-segments?, is not flushing TLB on context-switch important?) can be driven by the data from previously.
+
+\bibliography{proposal}
+
+\end{document}
+
+Read:
+Appsec
+Xcontainers
+Coalescing TLB entries
+Software page worker
+Sharingand Protectionina Single-Address-Space Operating System
+Application-Controlled Physical Memory using External Page-Cache Management
+Making Huge Pages Actually Useful
+Large Pages and Lightweight Memory Management inVirtualized Environments: Can You Have it Both Ways?
+Coordinated and Efficient Huge Page Management with Ingens
+Practical, transparent operating system support forsuperpages
+Efficient virtual memory for big memory server
+Efficient memory virtualization: Reducing dimensionality of nestedpage walks
+supporting superpage allocationwithout additional hardware support
+Controlling Physical Memory Fragmentation in Mobile Systems
+
+Fix:
+ASLR
+
+Python:
+https://www.python.org/dev/peps/pep-0554/
+https://stackoverflow.com/questions/7439608/steps-in-context-switching
+https://github.com/ericsnowcurrently/multi-core-python
+https://docs.python.org/3/c-api/init.html#sub-interpreter-support
+https://www.jtolio.com/2016/03/go-channels-are-bad-and-you-should-feel-bad/
+https://golang.org/doc/effective_go.html#concurrency
+http://www.stackless.com/pipermail/stackless-dev/2004-March/000022.html
+https://www.grant-olson.net/files/why_stackless.html
+https://bugs.python.org/issue24554
+https://bugs.python.org/issue10915
+https://bugs.python.org/issue15751
+https://bugs.python.org/issue6531
+https://mail.python.org/pipermail/python-dev/2017-September/149545.html
+https://www.reddit.com/r/Python/comments/6tn5vh/lets_remove_the_global_interpreter_lock/
+https://morepypy.blogspot.com/2017/08/lets-remove-global-interpreter-lock.html
+https://lwn.net/Articles/754577/
+http://www.dabeaz.com/GIL/
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: t
+%%% End:

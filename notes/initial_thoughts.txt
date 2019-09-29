@@ -1,0 +1,49 @@
+
+Theoretical speedup:
+
+Measurement:
+  - absolute performance. This is the main metric I aim to improve, but in order to understand it, I will also measure some factors.
+  - TLB miss/hits
+  - page-walk time
+  - 
+
+Target application:
+I am still working out the ideal application for shared pages.
+Ideally, parallel HLL
+
+HW feasibility
+Intel Haswell https://ark.intel.com/products/codename/42174/Haswell
+Intel Skylake https://ark.intel.com/products/codename/37572/Skylake
+Performance characteristics of explicit superpage support
+
+Recommendations
+http://amd-dev.wpengine.netdna-cdn.com/wordpress/media/2012/10/Hadoop_Tuning_Guide-Version5.pdf
+https://docs.mongodb.org/manual/tutorial/transparent-huge-pages/
+http://www.nuodb.com/techblog/linux-transparent-huge-pages-jemalloc-and-nuodb
+http://redis.io/topics/latency
+https://docs.voltdb.com/AdminGuide/adminmemmgt.php
+
+Benchmarks
+Name Suite/Application Description
+429.mcf SPEC CPU 2006 Single-threaded scientific computation
+Canneal PARSEC 3.0 Parallel scientific computation
+SVM Liblinear Machine learning, Support vector machine
+Tunkrank PowerGraph Large scale in-memory graph analytics
+Nutch Hadoop Web search indexing using MapReduce
+MovieRecmd Spark/MLlib Machine learning, Movie recommendation
+Olio Cloudstone Social-event Web service (ngnix/php/mysql)
+Redis Redis In-memory Key-value store
+MongoDB MongoDB In-memory NoSQL database
+
+free memory fragmentation index
+
+
+
+Contrary to a popular belief in the academic literature that fragmentation is not a critical problem and OSs can efficiently recover from fragmentation with memory compaction (i.e., by relocating pages) [29,31,46], we show that fragmentation can indeedcause the aforementioned issues with huge pages. Our viewsare also well corroborated by the Linux kernel communitydiscussions [6, 7]
+While previous workindicates that the existing OS designs can effectively handle unmovable pages [59], we believe this to be erroneous atleast in the context of long-running systems.
+
+Background
+Virtual memory decouples the address space used by programs from that exported by physical memory (RAM). A page table maps virtual to physical page number, with recently used page table entries cached in the hardware translation lookaside buffer (TLB). Increasing the pagesize increases TLB reach (the amount of data covered by translations cached in the TLB), but larger pages require larger regions of contiguous physical memory. Large pages can suffer from internal fragmentation (unused portions within the unit of allocation) and can also increase external fragmentation (reducing the remaining supply of contiguous physical memory). Using larger pages requires a more active memory management from the system software to increase available contiguity and avoid fragmentation. Seminal work in huge page management recognized the importance of explicitly managing memory contiguityin the OS [Practical,transparent operating system support forsuperpages] and formed the basis for huge page supportin FreeBSD. Innovations of Ingens relative to previouswork are considered in detail in Section 3.4;  here wesurvey recent hardware trends that make the need forsystem support of huge pages more urgen
+
+https://alexandrnikitin.github.io/blog/transparent-hugepages-measuring-the-performance-impact/
+https://www.kernel.org/doc/Documentation/vm/transhuge.txt
