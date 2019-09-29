@@ -1,3 +1,5 @@
+.sconsign.dblite
+build/
 *.aux
 *.log
 *.out
