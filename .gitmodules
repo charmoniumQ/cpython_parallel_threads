@@ -1,0 +1,3 @@
+[submodule "linux-with-syscall-stubs"]
+	path = linux-with-syscall-stubs
+	url = git@github.com:charmoniumQ/linux-with-syscall-stubs.git
