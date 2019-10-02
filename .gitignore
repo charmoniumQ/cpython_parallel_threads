@@ -1,7 +1,9 @@
 .sconsign.dblite
+auto/
 build/
 *.aux
 *.log
 *.out
 *.blg
 *.bbl
+.r-mount
