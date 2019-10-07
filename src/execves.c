@@ -1,12 +1,12 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
-#include <linux/syscalls.h>
-#include <sys/syscall.h>
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Samuel Grayson");
 MODULE_DESCRIPTION("Supports execve with (s)haring");
 MODULE_VERSION("0.01");
+
+asmlinkage long sys_ni_syscall(void) { return -ENOSYS; }
 
 extern void *sys_call_table[];
 
@@ -17,21 +17,24 @@ typedef struct {
 // Find first unused syscall number in linux/arch/x86/entry/syscalls/syscall_64.tbl
 #define __NR_execves 436
 
-asmlinkage int sys_execves(const char *pathname, char *const argv[], char *const envp[], const execves_attr_t* attr) {
-    printk(KERN_EMERG "Debug message shown!\n");
+asmlinkage long sys_execves(const char *pathname, char *const argv[], char *const envp[], const execves_attr_t* attr) {
+    printk(KERN_EMERG "Called execves!\n");
+    return 0;
 }
 
-static int __init execves_module_init() {
-    sys_call_table[__NR_execves] = execves;
+static int __init execves_module_init(void) {
+    printk(KERN_EMERG "Init execves!\n");
+    sys_call_table[__NR_execves] = sys_execves;
+    return 0;
 }
 
 
-static void __exit execves_module_init() {
+static void __exit execves_module_exit(void) {
     sys_call_table[__NR_execves] = sys_ni_syscall;
 }
 
-module_init(lkm_example_init);
-module_exit(lkm_example_exit);
+module_init(execves_module_init);
+module_exit(execves_module_exit);
 
 /*
  * Build Linux https://www.freecodecamp.org/news/building-and-installing-the-latest-linux-kernel-from-source-6d8df5345980/
@@ -53,6 +56,7 @@ module_exit(lkm_example_exit);
  * http://www.lifl.fr/%7Elipari/courses/ase_lkp/ase_lkp.html
  * https://linux-kernel-labs.github.io/master/labs/kernel_modules.html
  * https://blog.sourcerer.io/writing-a-simple-linux-kernel-module-d9dc3762c234?gi=600c712bc249
+ * http://blog.stuffedcow.net/wp-content/uploads/2015/08/Makefile
 
  * Debugging in GDB
  * https://nickdesaulniers.github.io/blog/2018/10/24/booting-a-custom-linux-kernel-in-qemu-and-debugging-it-with-gdb/

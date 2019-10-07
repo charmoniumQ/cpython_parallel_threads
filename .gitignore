@@ -1,9 +1,18 @@
-.sconsign.dblite
+# ignore bibTeX/LaTeX-generated files
 auto/
-build/
 *.aux
 *.log
 *.out
 *.blg
 *.bbl
+
+# ignore my generated files
+build/
+
 .r-mount
+
+# ignore generated kernel mod files
+*.o*
+*.mod*
+*.ko*
+Module*
