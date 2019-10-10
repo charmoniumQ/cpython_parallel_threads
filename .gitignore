@@ -8,6 +8,7 @@ auto/
 
 # ignore my generated files
 build/
+results/
 
 .r-mount
 

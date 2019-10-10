@@ -1,0 +1,4 @@
+kmod
+iputils-ping
+qemu-guest-agent
+sysvinit-core
