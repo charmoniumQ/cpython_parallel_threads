@@ -6,30 +6,48 @@ MODULE_AUTHOR("Samuel Grayson");
 MODULE_DESCRIPTION("Supports execve with (s)haring");
 MODULE_VERSION("0.01");
 
+// from linux-with-syscall-stubs/
 asmlinkage long sys_ni_syscall(void) { return -ENOSYS; }
 
-extern void *sys_call_table[];
+// from linux-with-syscall-stubs/System.map
+void **sys_call_table = (void *)0xffffffff82803340ULL;
+void (*set_pages_rw)(struct page *page, int numpages) = (void *) 0xffffffff810ab2b0ULL;
 
-typedef struct {
-    int unused;
-} execves_attr_t;
+// from linux-with-syscall-stubs/arch/x86/include/asm/pgtable_64.h
+#define vmemmap ((struct page *)VMEMMAP_START)
 
 // Find first unused syscall number in linux/arch/x86/entry/syscalls/syscall_64.tbl
 #define __NR_execves 436
 
-asmlinkage long sys_execves(const char *pathname, char *const argv[], char *const envp[], const execves_attr_t* attr) {
-    printk(KERN_EMERG "Called execves!\n");
+typedef struct {
+} execves_attr_t;
+
+asmlinkage long sys_execves(
+        const char *pathname,
+        char *const argv[],
+        char *const envp[],
+        const execves_attr_t* attr
+) {
+    printk(KERN_DEBUG "execves: called\n");
     return 0;
 }
 
 static int __init execves_module_init(void) {
-    printk(KERN_EMERG "Init execves!\n");
+    struct page *sys_call_table_temp;
+    printk(KERN_DEBUG "execves: init\n");
+    printk(KERN_DEBUG "execves: sys_call_table %p\n", sys_call_table);
+    printk(KERN_DEBUG "execves: sys_call_table[__NR_execves] %p\n", &sys_call_table[__NR_execves]);
+    sys_call_table_temp = virt_to_page(&sys_call_table[__NR_execves]);
+    printk(KERN_DEBUG "execves: sys_call_table_temp %p\n", sys_call_table_temp);
+    write_cr0 (read_cr0 () & (~ 0x10000));
+    set_pages_rw(sys_call_table_temp, 1);
     sys_call_table[__NR_execves] = sys_execves;
     return 0;
 }
 
 
 static void __exit execves_module_exit(void) {
+    printk(KERN_DEBUG "execves: end\n");
     sys_call_table[__NR_execves] = sys_ni_syscall;
 }
 
@@ -58,7 +76,18 @@ module_exit(execves_module_exit);
  * https://blog.sourcerer.io/writing-a-simple-linux-kernel-module-d9dc3762c234?gi=600c712bc249
  * http://blog.stuffedcow.net/wp-content/uploads/2015/08/Makefile
 
+Hacking the sys_call table:
+Hard-code the address from System.map [3, 5] (but disable kaslr [4]), brute-force scan in kernel memory, use kall_sysm_on_each_symbol (??) [1]
+Once you have the symbol table, do [2].
+
+1. https://stackoverflow.com/questions/6610733/reading-kernel-memory-using-a-module/6614661
+2. http://tldp.org/LDP/lkmpg/2.6/html/lkmpg.html#AEN976
+3. https://stackoverflow.com/questions/1586481/sys-call-table-in-linux-kernel-2-6-18
+4. https://unix.stackexchange.com/questions/424119/why-is-sys-call-table-predictable
+5. https://web.iiit.ac.in/~arjun.nath/random_notes/modifying_sys_call.html
+
  * Debugging in GDB
  * https://nickdesaulniers.github.io/blog/2018/10/24/booting-a-custom-linux-kernel-in-qemu-and-debugging-it-with-gdb/
  * https://www.kernel.org/doc/html/v4.10/dev-tools/gdb-kernel-debugging.html
+ * https://ownyourbits.com/2018/05/09/debugging-the-linux-kernel/
  */

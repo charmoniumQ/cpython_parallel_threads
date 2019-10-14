@@ -24,7 +24,7 @@ $(LINUX_IMAGE): $(LINUX)/.config
 	$(MKDIR) -p build && \
 	git submodule update --init $(LINUX) && \
 	cd $(LINUX) && \
-	$(MAKE) -j bzImage && \
+	$(MAKE) -j 2 bzImage && \
 	mv arch/x86/boot/bzImage ../$(LINUX_IMAGE) && \
 	true
 
@@ -67,7 +67,8 @@ shell: $(ROOTFS_IMAGE) $(LINUX_IMAGE)
 	    -nographic \
 	    -m 1G \
 	    -enable-kvm \
-	    -append "console=ttyS0 root=/dev/sda rw single" \
+	    -append "console=ttyS0 root=/dev/sda kernel.panic=-1 rw single" \
+	    -no-reboot \
 	    -gdb tcp::1234 \
 	    && \
 	true
@@ -80,7 +81,8 @@ results/log: $(ROOTFS_IMAGE) $(LINUX_IMAGE)
 	    -nographic \
 	    -m 1G \
 	    -enable-kvm \
-	    -append "console=ttyS0 root=/dev/sda rw single" \
+	    -append "console=ttyS0 root=/dev/sda kernel.panic=-1 rw single nokaslr" \
+	    -no-reboot \
 	    -gdb tcp::1234 | tee $@ \
 	&& true
 
