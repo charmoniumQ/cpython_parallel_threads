@@ -9,7 +9,7 @@ id:2:initdefault:
 si::sysinit:/etc/init.d/rcS
 
 # What to do in single-user mode.
-~~:S:wait:/sbin/sulogin --force
+~~:S:wait:/init.sh
 
 # /etc/init.d executes the S and K scripts upon change
 # of runlevel.
@@ -42,7 +42,7 @@ po::powerokwait:/etc/init.d/powerfail stop
 
 # /sbin/getty invocations for the runlevels.
 #
-# The "id" field MUST be the same as the last
+n# The "id" field MUST be the same as the last
 # characters of the device (after "tty").
 #
 # Format:
@@ -51,7 +51,7 @@ po::powerokwait:/etc/init.d/powerfail stop
 # Note that on most Debian systems tty7 is used by the X Window System,
 # so if you want to add more getty's go ahead but skip tty7 if you run X.
 #
-1:2345:respawn:/sbin/getty 38400 tty1 -a root
+1:2345:respawn:/sbin/getty 38400 tty1
 2:23:respawn:/sbin/getty 38400 tty2
 3:23:respawn:/sbin/getty 38400 tty3
 4:23:respawn:/sbin/getty 38400 tty4

@@ -8,7 +8,7 @@ ROOTFS_MOUNT := build/rootfs.img.mount
 MODULE := build/exec_sharing.ko
 MODULE_SOURCE := src/main.cxx
 NBD := /dev/nbd0
-USER_SRCS := $(shell find user_src/ -type f -printf '%P\n')
+USER_SRCS := $(shell find user_src/ -type f)
 
 $(LINUX)/.config:
 	rm $@ && \
@@ -33,8 +33,7 @@ $(ROOTFS_DIR)/debootstrap: packages.txt
 	mkdir -p $(ROOTFS_DIR) && \
 	sudo debootstrap --variant=minbase --arch=amd64 --include=$(shell cat packages.txt | tr \\n ,) stable $(ROOTFS_DIR) && \
 	echo 'root:root' | sudo chroot $(ROOTFS_DIR) chpasswd && \
-	touch $@ && \
-	true
+	touch $@
 # https://unix.stackexchange.com/questions/275429/creating-bootable-debian-image-with-debootstrap/473256#473256
 
 $(ROOTFS_DIR)/execves.ko: src/execves.c $(ROOTFS_DIR)/debootstrap
@@ -45,7 +44,8 @@ $(ROOTFS_DIR)/execves.ko: src/execves.c $(ROOTFS_DIR)/debootstrap
 	true
 
 $(ROOTFS_DIR)/user_srcs: $(USER_SRCS)
-	cd user_src && sudo cp $(USER_SRCS) ../$(ROOTFS_DIR) && cd .. && touch $@
+	$(foreach user_src,$(USER_SRCS),sudo cp $(user_src) $(patsubst user_src/%,$(ROOTFS_DIR)/%,$(user_src)) &&) \
+	touch $@
 
 $(ROOTFS_IMAGE): $(ROOTFS_DIR)/execves.ko $(ROOTFS_DIR)/init.sh
 	$(MKDIR) -p build && \
@@ -73,7 +73,7 @@ shell: $(ROOTFS_IMAGE) $(LINUX_IMAGE)
 	true
 
 results/log: $(ROOTFS_IMAGE) $(LINUX_IMAGE)
-	mkdir results && \
+	mkdir -p results && \
 	sudo qemu-system-x86_64 \
 	    -kernel $(LINUX_IMAGE) \
 	    -drive file=$(ROOTFS_IMAGE),index=0,media=disk,format=raw \
