@@ -2,12 +2,7 @@
 #include <unistd.h>
 #include <sys/syscall.h>
 #include <stdio.h>
-
-#define __NR_execves 436
-
-typedef struct {
-    int unused;
-} execves_attr_t;
+#include "execves.h"
 
 int main(int argc, char **argv) {
     execves_attr_t attrs;

@@ -36,18 +36,11 @@ $(ROOTFS_DIR)/debootstrap: packages.txt
 	touch $@
 # https://unix.stackexchange.com/questions/275429/creating-bootable-debian-image-with-debootstrap/473256#473256
 
-$(ROOTFS_DIR)/execves.ko: src/execves.c $(ROOTFS_DIR)/debootstrap
-	cd src && \
-	$(MAKE) modules && \
-	cd .. && \
-	mv src/execves.ko $@ && \
-	true
-
 $(ROOTFS_DIR)/user_srcs: $(USER_SRCS)
 	$(foreach user_src,$(USER_SRCS),sudo cp $(user_src) $(patsubst user_src/%,$(ROOTFS_DIR)/%,$(user_src)) &&) \
 	touch $@
 
-$(ROOTFS_IMAGE): $(ROOTFS_DIR)/execves.ko $(ROOTFS_DIR)/init.sh
+$(ROOTFS_IMAGE): $(ROOTFS_DIR)/init.sh
 	$(MKDIR) -p build && \
 	qemu-img create -f raw $@ 1g && \
 	mkfs.ext2 $@ && \
@@ -81,7 +74,7 @@ results/log: $(ROOTFS_IMAGE) $(LINUX_IMAGE)
 	    -nographic \
 	    -m 1G \
 	    -enable-kvm \
-	    -append "console=ttyS0 root=/dev/sda kernel.panic=-1 rw single nokaslr" \
+	    -append "console=ttyS0 root=/dev/sda kernel.panic=-1 rw single" \
 	    -no-reboot \
 	    -gdb tcp::1234 | tee $@ \
 	&& true
