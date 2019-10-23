@@ -9,22 +9,55 @@ SYSCALL_DEFINE4(execves,
         const execves_attr_t __user *, attr
 ) {
     execves_attr_t attr_;
-    unsigned long ret;
+    unsigned long ret = 0;
+    struct file* file;
+    struct user_arg_ptr argv_ = { .ptr.native = argv };
+    struct user_arg_ptr envp_ = { .ptr.native = envp };
 
     struct filename* filename_ = getname(filename);
-    if (unlikely(IS_ERR(filename)))
-	return PTR_ERR(filename);
-
-    do {
-	ret = copy_from_user(&attr_, attr, sizeof(attr_));
-    } while (unlikely(ret > 0));
-    if (unlikely(ret < 0)) {
-	return ret;
+    if (unlikely(IS_ERR(filename))) {
+	ret = PTR_ERR(filename);
+	goto out_err;
     }
 
+    while (unlikely((ret = copy_from_user(&attr_, attr, sizeof(attr_))) > 0));
+    if (ret < 0)
+	goto out_filename_;
+
+    // Really should check RLIMIT_NPROC here
+
+    bprm = kzalloc(sizeof(*bprm), GFP_KERNEL);
+    if (unlikely(!bprm)) {
+	ret = -ENOMEM;
+	goto out_filename_;
+    }
+
+    ret = prepare_bprm_creds(bprm);
+    if (ret) {
+	ret = -ENOMEM;
+	goto out_free;
+    }
+
+    check_unsafe_exec(bprm);
+    current->in_execve = 1;
+
+    file = do_open_execat(AT_FDCWD, filename_, 0);
+    ret = PTR_ERR(file);
+    if (IS_ERR(file))
+	goto clean_filename_;
+
+    sched_exec();
+
     printk(KERN_DEBUG "execves: called %s\n", filename_->name);
-    return 0;
+
+ out_filename_:
+    putname(filename_);
+
+ out_err:
+    return ret;
 }
+
+
 
 /*
  * Build Linux https://www.freecodecamp.org/news/building-and-installing-the-latest-linux-kernel-from-source-6d8df5345980/
