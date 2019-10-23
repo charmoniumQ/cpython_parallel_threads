@@ -44,9 +44,9 @@ static int __init execves_module_init(void) {
     write_cr0(read_cr0 () & (~ 0x10000));
 
     sys_call_table_page = virt_to_page(&sys_call_table[__NR_execves]);
-    printk(KERN_DEBUG "execves: sys_call_table_page->flags = %u\n", sys_call_table_page->flags);
+    printk(KERN_DEBUG "execves: sys_call_table_page->flags = %lu\n", sys_call_table_page->flags);
     set_pages_rw(sys_call_table_page, 1);
-    printk(KERN_DEBUG "execves: sys_call_table_page->flags = %u\n", sys_call_table_page->flags);
+    printk(KERN_DEBUG "execves: sys_call_table_page->flags = %lu\n", sys_call_table_page->flags);
 
     sys_call_table[__NR_execves] = sys_execves;
     return 0;
