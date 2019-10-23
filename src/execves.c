@@ -2,14 +2,27 @@
 #include <linux/syscalls.h>
 #include "execves.h"
 
-SYSCALL_DEFINE4(
-        execves,
+SYSCALL_DEFINE4(execves,
         const char __user *, filename,
         const char __user * const __user *, argv,
         const char __user * const __user *, envp,
         const execves_attr_t __user *, attr
 ) {
-    printk(KERN_DEBUG "execves: called\n");
+    execves_attr_t attr_;
+    unsigned long ret;
+
+    struct filename* filename_ = getname(filename);
+    if (unlikely(IS_ERR(filename)))
+	return PTR_ERR(filename);
+
+    do {
+	ret = copy_from_user(&attr_, attr, sizeof(attr_));
+    } while (unlikely(ret > 0));
+    if (unlikely(ret < 0)) {
+	return ret;
+    }
+
+    printk(KERN_DEBUG "execves: called %s\n", filename_->name);
     return 0;
 }
 

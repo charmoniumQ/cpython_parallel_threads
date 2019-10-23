@@ -24,7 +24,7 @@ $(LINUX_IMAGE): $(LINUX)/.config
 	$(MKDIR) -p build && \
 	git submodule update --init $(LINUX) && \
 	cd $(LINUX) && \
-	$(MAKE) -j 2 bzImage && \
+	$(MAKE) -j 3 bzImage && \
 	mv arch/x86/boot/bzImage ../$(LINUX_IMAGE) && \
 	true
 
@@ -36,11 +36,11 @@ $(ROOTFS_DIR)/debootstrap: packages.txt
 	touch $@
 # https://unix.stackexchange.com/questions/275429/creating-bootable-debian-image-with-debootstrap/473256#473256
 
-$(ROOTFS_DIR)/user_srcs: $(USER_SRCS)
+$(ROOTFS_DIR)/user_srcs: $(ROOTFS_DIR)/debootstrap $(USER_SRCS)
 	$(foreach user_src,$(USER_SRCS),sudo cp $(user_src) $(patsubst user_src/%,$(ROOTFS_DIR)/%,$(user_src)) &&) \
 	touch $@
 
-$(ROOTFS_IMAGE): $(ROOTFS_DIR)/init.sh
+$(ROOTFS_IMAGE): $(ROOTFS_DIR)/user_srcs
 	$(MKDIR) -p build && \
 	qemu-img create -f raw $@ 1g && \
 	mkfs.ext2 $@ && \
