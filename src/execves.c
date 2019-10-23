@@ -33,14 +33,21 @@ asmlinkage long sys_execves(
 }
 
 static int __init execves_module_init(void) {
-    struct page *sys_call_table_temp;
+    struct page *sys_call_table_page;
     printk(KERN_DEBUG "execves: init\n");
-    printk(KERN_DEBUG "execves: sys_call_table %p\n", sys_call_table);
-    printk(KERN_DEBUG "execves: sys_call_table[__NR_execves] %p\n", &sys_call_table[__NR_execves]);
-    sys_call_table_temp = virt_to_page(&sys_call_table[__NR_execves]);
-    printk(KERN_DEBUG "execves: sys_call_table_temp %p\n", sys_call_table_temp);
-    write_cr0 (read_cr0 () & (~ 0x10000));
-    set_pages_rw(sys_call_table_temp, 1);
+
+    printk(KERN_DEBUG "execves: &sys_call_table[0] = 0x%p\n", sys_call_table);
+    printk(KERN_DEBUG "execves: &sys_call_table[0] = 0x%p\n", &sys_call_table[0]);
+    printk(KERN_DEBUG "execves: &sys_call_table[__NR_execves] = 0x%p\n", &sys_call_table[__NR_execves]);
+
+    printk(KERN_DEBUG "execves: write cr0\n");
+    write_cr0(read_cr0 () & (~ 0x10000));
+
+    sys_call_table_page = virt_to_page(&sys_call_table[__NR_execves]);
+    printk(KERN_DEBUG "execves: sys_call_table_page->flags = %u\n", sys_call_table_page->flags);
+    set_pages_rw(sys_call_table_page, 1);
+    printk(KERN_DEBUG "execves: sys_call_table_page->flags = %u\n", sys_call_table_page->flags);
+
     sys_call_table[__NR_execves] = sys_execves;
     return 0;
 }
