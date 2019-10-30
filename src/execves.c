@@ -1,60 +1,105 @@
 #include <linux/kernel.h>
 #include <linux/syscalls.h>
+#include <linux/slab.h>
+#include <linux/binfmts.h>
 #include "execves.h"
 
+//#define RESOURCE_(acquire, use, free) { acquire_block; do { use_block; } while (0); free_block; }
+#define acquire {
+#define use do
+#define release while (0);
+#define end_resource }
+#define cleanup break
+
+// symbols from fs/exec.c
+extern int prepare_bprm_creds(struct linux_binprm *bprm);
+extern void free_bprm(struct linux_binprm *bprm);
+extern void check_unsafe_exec(struct linux_binprm *bprm);
+extern struct file *do_open_execat(int fd, struct filename *name, int flags);
+extern int bprm_mm_init(struct linux_binprm *bprm);
+
 SYSCALL_DEFINE4(execves,
-        const char __user *, filename,
-        const char __user * const __user *, argv,
-        const char __user * const __user *, envp,
-        const execves_attr_t __user *, attr
+		const char __user *, filename,
+		const char __user * const __user *, argv,
+		const char __user * const __user *, envp,
+		const execves_attr_t __user *, attr
 ) {
-    execves_attr_t attr_;
-    unsigned long ret = 0;
-    struct file* file;
-    struct user_arg_ptr argv_ = { .ptr.native = argv };
-    struct user_arg_ptr envp_ = { .ptr.native = envp };
+	unsigned long ret = 0;
 
-    struct filename* filename_ = getname(filename);
-    if (unlikely(IS_ERR(filename))) {
-	ret = PTR_ERR(filename);
-	goto out_err;
-    }
+	execves_attr_t attr_;
+	/* struct user_arg_ptr argv_ = { .ptr.native = argv }; */
+	/* struct user_arg_ptr envp_ = { .ptr.native = envp }; */
 
-    while (unlikely((ret = copy_from_user(&attr_, attr, sizeof(attr_))) > 0));
-    if (ret < 0)
-	goto out_filename_;
+	printk(KERN_DEBUG "In syscall\n");
 
-    // Really should check RLIMIT_NPROC here
+	use {
+		acquire struct filename* filename_ = getname(filename);
+		{
+			if (unlikely(IS_ERR(filename_))) {
+				ret = PTR_ERR(filename_);
+				cleanup;
+			}
+		} use {
+			printk(KERN_DEBUG "execves: called %s\n", filename_->name);
 
-    bprm = kzalloc(sizeof(*bprm), GFP_KERNEL);
-    if (unlikely(!bprm)) {
-	ret = -ENOMEM;
-	goto out_filename_;
-    }
+			while (unlikely((ret = copy_from_user(&attr_, attr, sizeof(attr_))) > 0));
+			if (unlikely(ret < 0))
+				cleanup;
 
-    ret = prepare_bprm_creds(bprm);
-    if (ret) {
-	ret = -ENOMEM;
-	goto out_free;
-    }
+			if ((current->flags & PF_NPROC_EXCEEDED) &&
+				atomic_read(&current_user()->processes) > rlimit(RLIMIT_NPROC)) {
+				ret = -EAGAIN;
+				cleanup;
+			}
 
-    check_unsafe_exec(bprm);
-    current->in_execve = 1;
+			acquire struct linux_binprm *bprm = kzalloc(sizeof(*bprm), GFP_KERNEL);
+			{
+				if (unlikely(!bprm)) {
+					ret = -ENOMEM;
+					cleanup;
+				}
+			} use {
+				ret = prepare_bprm_creds(bprm);
+				if (ret)
+					cleanup;
 
-    file = do_open_execat(AT_FDCWD, filename_, 0);
-    ret = PTR_ERR(file);
-    if (IS_ERR(file))
-	goto clean_filename_;
+				check_unsafe_exec(bprm);
 
-    sched_exec();
+				acquire current->in_execve = 1;
+				use {
+					struct file* file = do_open_execat(AT_FDCWD, filename_, 0);
+					ret = PTR_ERR(file);
+					if (IS_ERR(file))
+						cleanup;
 
-    printk(KERN_DEBUG "execves: called %s\n", filename_->name);
+					sched_exec();
 
- out_filename_:
-    putname(filename_);
+					bprm->file = file;
+					if (!filename_) {
+						bprm->filename = "none";
+					} else {
+						bprm->filename = filename_->name;
+					}
+					bprm->interp = bprm->filename;
 
- out_err:
-    return ret;
+					ret = bprm_mm_init(bprm);
+					if (ret)
+						cleanup;
+
+				} release {
+					/* current->fs->in_exec = 0; */
+					current->in_execve = 0;
+				} end_resource;
+			} release {
+				free_bprm(bprm);
+			} end_resource;
+		} release {
+			if (filename_)
+				putname(filename_);
+		} end_resource;
+	} release
+
+	return ret;
 }
 
 

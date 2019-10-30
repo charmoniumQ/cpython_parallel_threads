@@ -10,7 +10,7 @@ MODULE_SOURCE := src/main.cxx
 NBD := /dev/nbd0
 USER_SRCS := $(shell find user_src/ -type f)
 
-$(LINUX)/.config:
+$(LINUX)/.config: linux_debug_config.diff
 	rm $@ && \
 	cd $(LINUX) && \
 	$(MAKE) x86_64_defconfig && \
@@ -20,7 +20,7 @@ $(LINUX)/.config:
 # DRY defining these env vars
 # pass them to my script instead
 
-$(LINUX_IMAGE): $(LINUX)/.config
+$(LINUX_IMAGE): $(LINUX)/.config $(shell find src/ -type f -name '*.c')
 	$(MKDIR) -p build && \
 	git submodule update --init $(LINUX) && \
 	cd $(LINUX) && \

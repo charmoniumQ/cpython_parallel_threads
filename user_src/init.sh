@@ -2,8 +2,8 @@
 
 set -x -e
 
-echo 8 > /proc/sys/kernel/printk
 lines=$(dmesg | wc -l)
+echo 8 > /proc/sys/kernel/printk
 gcc test.c -o test
 ./test
 dmesg | tail -n +${lines}

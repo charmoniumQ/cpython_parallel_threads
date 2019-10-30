@@ -9,5 +9,6 @@ int main(int argc, char **argv) {
     char** args = {NULL};
     char** envp = {NULL};
     long res = syscall(__NR_execves, "./test.sh", args, envp, &attrs);
+    printf("execves returned %ld\n", res);
     return res;
 }
