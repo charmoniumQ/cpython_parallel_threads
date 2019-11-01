@@ -2,3 +2,5 @@ kmod
 iputils-ping
 qemu-guest-agent
 sysvinit-core
+gcc
+libc6-dev
