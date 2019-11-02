@@ -1,61 +1,40 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
+#include <linux/syscalls.h>
+#include <linux/mm.h>
+#include "execves_syscall.c"
 
-MODULE_LICENSE("GPL");
+MODULE_LICENSE("Dual MIT/GPL");
 MODULE_AUTHOR("Samuel Grayson");
 MODULE_DESCRIPTION("Supports execve with (s)haring");
 MODULE_VERSION("0.01");
 
-// from linux-with-syscall-stubs/
-asmlinkage long sys_ni_syscall(void) { return -ENOSYS; }
+SYSCALL_DEFINE1(not_implemented, char, x) { return -ENOSYS; }
 
-// from linux-with-syscall-stubs/System.map
-void **sys_call_table = (void *)0xffffffff82803340ULL;
-void (*set_pages_rw)(struct page *page, int numpages) = (void *) 0xffffffff810ab2b0ULL;
+static void set_syscall(unsigned int number, sys_call_ptr_t function) {
+    struct page *sys_call_table_page = virt_to_page(&sys_call_table[number]);
+    unsigned long cr0 = read_cr0();
 
-// from linux-with-syscall-stubs/arch/x86/include/asm/pgtable_64.h
-#define vmemmap ((struct page *)VMEMMAP_START)
-
-// Find first unused syscall number in linux/arch/x86/entry/syscalls/syscall_64.tbl
-#define __NR_execves 436
-
-typedef struct {
-} execves_attr_t;
-
-asmlinkage long sys_execves(
-        const char *pathname,
-        char *const argv[],
-        char *const envp[],
-        const execves_attr_t* attr
-) {
-    printk(KERN_DEBUG "execves: called\n");
-    return 0;
+    // Note: modify write_cr0 to not check the protected bit
+    // Note: change page protection to not protect RO data
+    // X86_CR0_WP
+    write_cr0(cr0 & ~0x10000);
+    set_pages_rw(sys_call_table_page, 1);
+    sys_call_table[number] = function;
+    set_pages_rw(sys_call_table_page, 0);
+    write_cr0(cr0);
 }
 
 static int __init execves_module_init(void) {
-    struct page *sys_call_table_page;
     printk(KERN_DEBUG "execves: init\n");
-
-    printk(KERN_DEBUG "execves: &sys_call_table[0] = 0x%p\n", sys_call_table);
-    printk(KERN_DEBUG "execves: &sys_call_table[0] = 0x%p\n", &sys_call_table[0]);
-    printk(KERN_DEBUG "execves: &sys_call_table[__NR_execves] = 0x%p\n", &sys_call_table[__NR_execves]);
-
-    printk(KERN_DEBUG "execves: write cr0\n");
-    write_cr0(read_cr0 () & (~ 0x10000));
-
-    sys_call_table_page = virt_to_page(&sys_call_table[__NR_execves]);
-    printk(KERN_DEBUG "execves: sys_call_table_page->flags = %lu\n", sys_call_table_page->flags);
-    set_pages_rw(sys_call_table_page, 1);
-    printk(KERN_DEBUG "execves: sys_call_table_page->flags = %lu\n", sys_call_table_page->flags);
-
-    sys_call_table[__NR_execves] = sys_execves;
+    set_syscall(__NR_execves, __x64_sys_execves);
     return 0;
 }
 
 
 static void __exit execves_module_exit(void) {
-    printk(KERN_DEBUG "execves: end\n");
-    sys_call_table[__NR_execves] = sys_ni_syscall;
+    set_syscall(__NR_execves, __x64_sys_not_implemented);
+    printk(KERN_DEBUG "execves: exit\n");
 }
 
 module_init(execves_module_init);
