@@ -1,0 +1,66 @@
+- path: main project
+  items:
+  - due: 2019-10-30
+    done: 2019-11-01
+    goal: Compile syscall into kernel module
+    details:
+      - One command should build the kernel
+      - insert it in the disk image
+      - boot in QEMU, load the module
+      - call the syscall from userspace
+      - not take so long
+    caveat: If this is not possible, then try to minimize the runtime of compiling into the kernel core.
+
+  - due: T + 14
+    goal: exec another program, except arguments and environment variables won't be set.
+    note: Steal from heap to allocate new stack
+
+  - due: T + 7
+    goal: steal from heap for space to propagate envp and argv
+
+  - due: T + 7
+    goal: intercept calls to malloc with LD_PRELOAD and replace with a thread-safe user-land shmalloc
+
+  - due: T + 7
+    goal: write rdtsc timing for creating sharing-processes and switching between sharing-processes on one processor
+
+- path: stretch goals for IPC
+  items:
+  - due: T + 7
+    goal: implement fast IPC
+
+  - due: T + 7
+    goal: time Python programs sharing processes
+    details:
+      - process_sharing.run(func) calls process_sharing.clone(lambda: execve("python", "-m", "process_sharing", ""))
+
+- path: report and presentation
+  items:
+  - due: T + 3
+    goal: report template
+
+  - due: T + 3
+    goal: fill background from proposal (class proposal 1, class proposal 2, NSF GRFP proposal)
+
+  - due: T + 5
+    goal: format results for display
+
+  - due: T + 5
+    goal: compile presentation from report
+
+- script: |
+    from datetime import date, timedelta
+    T = date(2019, 10, 30)
+    dt = timedelta(days=14 + 7 + 7 + 7)
+    print(repr(T + dt))
+
+- path: old
+  items:
+  - due: T + 14
+    goal: A threadsafe shared-memory allocator syscall
+    details:
+      - no-free block allocator
+      - with atomic fetch-add
+      - that allocates pages on-demand
+      - flips to mmap for large-page demands
+    testing: testable with pthreads, even though my project isn't pthreads

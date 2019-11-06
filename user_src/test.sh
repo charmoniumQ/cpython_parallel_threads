@@ -1,2 +1,4 @@
 #!/bin/sh
-echo "execing $@"
+echo "execing $0"
+echo "args = $@"
+echo "abc = $abc"

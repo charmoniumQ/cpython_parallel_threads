@@ -24,7 +24,7 @@ $(LINUX_IMAGE): $(LINUX)/.config $(shell find src/ -type f -name '*.c')
 	$(MKDIR) -p build && \
 	git submodule update --init $(LINUX) && \
 	cd $(LINUX) && \
-	$(MAKE) -j 3 bzImage && \
+	$(MAKE) -j 4 bzImage && \
 	mv arch/x86/boot/bzImage ../$(LINUX_IMAGE) && \
 	true
 
