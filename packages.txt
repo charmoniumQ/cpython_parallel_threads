@@ -4,3 +4,4 @@ qemu-guest-agent
 sysvinit-core
 gcc
 libc6-dev
+gdb

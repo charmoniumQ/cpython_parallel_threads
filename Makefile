@@ -20,7 +20,7 @@ $(LINUX)/.config: linux_debug_config.diff
 # DRY defining these env vars
 # pass them to my script instead
 
-$(LINUX_IMAGE): $(LINUX)/.config $(shell find src/ -type f -name '*.c')
+$(LINUX_IMAGE): $(LINUX)/.config
 	$(MKDIR) -p build && \
 	git submodule update --init $(LINUX) && \
 	cd $(LINUX) && \
