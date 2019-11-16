@@ -1,5 +1,12 @@
+.r-mount
+
+*.exe
+*.so
+
+auto/
 *.aux
 *.log
 *.out
 *.blg
 *.bbl
+*.exe

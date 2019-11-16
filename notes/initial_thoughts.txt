@@ -47,3 +47,9 @@ Virtual memory decouples the address space used by programs from that exported b
 
 https://alexandrnikitin.github.io/blog/transparent-hugepages-measuring-the-performance-impact/
 https://www.kernel.org/doc/Documentation/vm/transhuge.txt
+
+https://www.cs.columbia.edu/~junfeng/13fa-w4118/lectures/l20-adv-mm.pdf
+https://manybutfinite.com/post/how-the-kernel-manages-your-memory/
+https://web.archive.org/web/20160305003746/http://duartes.org/gustavo/blog/post/how-the-kernel-manages-your-memory/
+https://lwn.net/Articles/630727/
+https://github.com/0xAX/linux-insides/blob/master/SysCall/linux-syscall-4.md
