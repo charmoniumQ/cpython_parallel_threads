@@ -1,5 +1,5 @@
-CC = g
-CXX = g++
+CC = clang
+CXX = clang++
 CCFLAGS += -g -Og -Wall -Wextra -fopenmp -fsanitize=address -fsanitize=undefined
 CXXFLAGS += -std=c++2a $(CCFLAGS)
 CFLAGS += $(CCFLAGS)
@@ -12,7 +12,8 @@ LDLIBS += -ldl
 	$(LINK.cc) $^ $(LOADLIBES) $(LDLIBS) -o $@
 
 %.so: %.c
-	$(CC) $(CFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -fPIC -rdynamic -shared -fno-gnu-unique -o $@ $^
+	$(CC) $(CFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -fPIC -rdynamic -shared -o $@ $^
+#  -fno-gnu-unique
 
 %.log: %.exe $(lastword $(MAKEFILE_LIST))
 	./$< | tee $@

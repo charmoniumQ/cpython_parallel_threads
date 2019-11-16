@@ -9,7 +9,7 @@ int main() {
 	srand(clock()); 
 	a = rand() % 1000;
 
-	usleep(100000);
+	usleep(10000);
 	// at this point, both writes should have gone through
 
 	printf("%d\n", a);
