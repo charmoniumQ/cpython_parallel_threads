@@ -13,9 +13,6 @@ LDLIBS += -ldl -ltbb
 %.exe: %.cc
 	$(LINK.cc) $^ $(LOADLIBES) $(LDLIBS) -o $@
 
-targets/python_run.so: targets/python_run.cc
-	$(CXX) $(CPPFLAGS) $(TARGET_ARCH) $(SHLIBFLAGS) $(shell python3.7-config --ldflags) $(shell python3.7-config --cflags) -o $@ $^
-
 %.so: %.cc
 	$(CXX) $(CFLAGS) $(CPPFLAGS) $(TARGET_ARCH) $(SHLIBFLAGS) -o $@ $^
 
@@ -38,5 +35,11 @@ clean:
 	find . -name '*.so'  -print0 | xargs -0 rm -f ; \
 	true
 
+.PHONY: tests
+tests:
+	./tests/test1.sh && \
+	./tests/test2.sh && \
+	true
+
 .PHONY: all
-all: src/run_sharing.exe targets/test2.so targets/test1_a.so targets/test1_b.so targets/python_run.so
+all: src/exec_sharing.exe tests

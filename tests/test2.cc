@@ -18,9 +18,9 @@ int main() {
 	std::uniform_int_distribution<int> dist {0, 20};
 
 	std::ostringstream ss;
-	ss << "pid " << getpid() << " ";
-	ss << "tid " << std::this_thread::get_id() << " ";
-	ss << "rand " << dist(rd) << " ";
+	ss << "pid " << getpid() << "\n";
+	ss << "tid " << std::this_thread::get_id() << "\n";
+	ss << "rand " << dist(rd) << "\n";
 	std::cout << ss.str() << std::endl;
 	return 0;
 }
