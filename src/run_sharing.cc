@@ -40,7 +40,7 @@ auto maybe_parallel_for_each(Policy policy, Iterator begin, Iterator end, F f) {
 	case Policy::par_unseq: return std::for_each(std::execution::par_unseq, begin, end, f);
 	case Policy::    unseq: return std::for_each(std::execution::    unseq, begin, end, f);
 	case Policy::      seq: return std::for_each(std::execution::      seq, begin, end, f);
-	case Policy::  par_seq: return std::for_each(std::execution::  par    , begin, end, f);
+	case Policy::  par_seq: return std::for_each(std::execution::par      , begin, end, f);
   }
 }
 
@@ -50,12 +50,21 @@ int main(int argc, char* const argv[]) {
 
 	// parse flag arguments
 	Policy policy = Policy::par_unseq;
-	if (args[1] == "-u") {
-		policy = Policy::seq;
+	if (false) {}
+	else if (args[1] == "-par_unseq") {
+		policy = Policy::par_unseq;
 		args.erase(args.begin() + 1);
 	}
-	if (args[1] == "-s") {
+	else if (args[1] == "-unseq") {
+		policy = Policy::unseq;
+		args.erase(args.begin() + 1);
+	}
+	else if (args[1] == "-par_seq") {
 		policy = Policy::par_seq;
+		args.erase(args.begin() + 1);
+	}
+	else if (args[1] == "-seq") {
+		policy = Policy::seq;
 		args.erase(args.begin() + 1);
 	}
 	// no more flag arguments present in args
