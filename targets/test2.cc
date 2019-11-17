@@ -4,6 +4,15 @@
 #include <random>
 #include <sstream>
 
+static void ctor(void) __attribute__((constructor));
+static void ctor(void) {
+	std::cout << "ctor" << std::endl;
+}
+static void dtor(void) __attribute__((destructor));
+static void dtor(void) {
+	std::cout << "dtor" << std::endl;
+}
+
 int main() {
 	std::random_device rd;
 	std::uniform_int_distribution<int> dist {0, 20};
