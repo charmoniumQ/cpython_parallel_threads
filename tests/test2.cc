@@ -6,11 +6,11 @@
 
 static void ctor(void) __attribute__((constructor));
 static void ctor(void) {
-	std::cout << "ctor" << std::endl;
+	std::cout << "ctor\n";
 }
 static void dtor(void) __attribute__((destructor));
 static void dtor(void) {
-	std::cout << "dtor" << std::endl;
+	std::cout << "dtor\n";
 }
 
 int main() {
@@ -21,6 +21,6 @@ int main() {
 	ss << "pid " << getpid() << "\n";
 	ss << "tid " << std::this_thread::get_id() << "\n";
 	ss << "rand " << dist(rd) << "\n";
-	std::cout << ss.str() << std::endl;
+	std::cout << ss.str();
 	return 0;
 }
