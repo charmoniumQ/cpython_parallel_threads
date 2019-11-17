@@ -14,7 +14,7 @@ static void dtor(void) {
 }
 
 int main() {
-	std::random_device rd;
+	std::default_random_engine rd {0};
 	std::uniform_int_distribution<int> dist {0, 20};
 
 	std::ostringstream ss;

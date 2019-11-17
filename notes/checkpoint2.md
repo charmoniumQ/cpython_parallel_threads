@@ -38,15 +38,14 @@ processes-as-threads.
 
 For example one could write:
 
-    /* prog1.c */
-    /*
+    /* prog1.c
      * For exact deatils, see
      * https://github.com/charmoniumQ/exec_sharing/blob/c1b4e93f71eaa45652e90979b4b8e6f05dc76d69/tests/test2.cc
      * https://github.com/charmoniumQ/exec_sharing/blob/c1b4e93f71eaa45652e90979b4b8e6f05dc76d69/tests/test2.sh
      */
     int main() {
-        srand(/* seed non-deterministically */);
-        printf("pid=%d tid=%d rand=%d\n", getpid(), gettid(), rand());
+        srand(0);
+        printf("rand=%d, pid=%d tid=%d rand=%d\n", (int)(rand()%100), getpid(), gettid());
         return 0;
     }
 
@@ -54,10 +53,11 @@ Make sure to compile it with `-shared -rdynamic -fpic`. Then run
 
     $ exec_sharing prog1 \; prog1
 
-You should see the SAME `pid`, but DIFFERENT `tid` and `rand`,
-indicating this code which is being run as a thread transparently. The
-random seed is stored as a static variable, so this test verifies that
-they have different copies of static data.
+You should see the *same* `rand`, *same* `pid`, but *different* `tid`,
+indicating this code which is being run in the same process as a
+thread transparently. This also tests that one `rand()` does not
+influence the other `rand()`; the static state is different for each
+process-as-thread.
 
 The escaped-semicolon separates the programs you want to run, so that
 it knows where the arguments to `prog1` stop and the invocation of
@@ -67,7 +67,7 @@ processes-as-threads.
 You could even write a completely different program and run it in a
 process-as-thread:
 
-    $ exec_sharing prog1 \; different_prog
+    $ exec_sharing prog1 --args-go-here \; different_prog --more-args \; third_program --args
 
 ### ctors/dtors
 
@@ -77,20 +77,34 @@ once per process-as-thread, so the execution maintains corretness with
 separate copies of the data in one virtual address-space. There's one
 hiccup: `dlopen` sometimes caches libraries and doesn't re-initialize
 when they are loaded again. To work around this, I simply copy the
-library to a different name
+library to a different filename.
 
     $ cp ctors_prog ctors_prog2
+    $ # now we have 'tricked' dlopen/dlclose into running init/fini twice
+	$ # when I load them in exec_sharing
     $ exec_sharing ctors_prog \; ctors_prog2
-    # now we have 'tricked' dlopen/dlclose into running init/fini twice
+    ctor code
+    ctor code
+    dtor code
+    dtor code
 
 ### Python
 
-Instead of recompiling all of Python with `fpic`, I am just using its
+Instead of recompiling all of Python with `-fpic`, I am just using its
 API which is already compiled as a shared library. I just need to
 initialize the interpreter and call `PyRun_SimpleFile(fp, path)`.
 
 Unfortunately this still does not work. When I run one instance in a
 process-as-thread, its fine, but two does not work.
+
+
+    $ exec_sharing run_python script.py
+    <output of script.py>
+
+    $ # I have to use the cp trick to reinitialize
+    $ cp run_python run_python_2
+    $ exec_sharing run_python script.py \; run_python_2 script.py
+    [1]    26159 segmentation fault
 
 I will spend the next segment of time debugging this problem.
 
