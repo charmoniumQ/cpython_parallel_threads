@@ -36,9 +36,10 @@ clean:
 	true
 
 .PHONY: tests
-tests:
+tests: src/exec_sharing.exe
 	./tests/test1.sh && \
 	./tests/test2.sh && \
+	./tests/test3.sh && \
 	true
 
 .PHONY: all

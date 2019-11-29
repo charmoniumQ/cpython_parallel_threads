@@ -1,6 +1,9 @@
-#include <dlfcn.h>
+#include <iostream>
 #include <string>
 #include <stdexcept>
+#include <cstring>
+
+#include <dlfcn.h>
 
 class DynamicLib {
 	void* dllib = NULL;
@@ -26,6 +29,11 @@ public:
 		if ((error = dlerror()) != NULL)
 			throw std::runtime_error("dlopen(): " + (error == NULL ? "NULL" : std::string{error}));
 		return symbol;
+	}
+
+	template <typename T>
+	T get(std::string symbol_name) {
+		return (T) (*this)[symbol_name];
 	}
 
 };

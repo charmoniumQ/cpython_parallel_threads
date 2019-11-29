@@ -7,10 +7,10 @@
 #include "util.hh"
 
 int run_main(const std::vector<std::string>& args) {
-	DynamicLib lib (args[0]);
+	DynamicLib lib {args[0]};
 
-	int (*this_main)(int argc, char* argv[]);
-	this_main = (int(*)(int, char**)) lib["main"];
+	typedef int(*main_method)(int, char**);
+	main_method this_main = lib.get<main_method>("main");
 
     char** argv = new char*[args.size()];
 	for (size_t i = 0; i < args.size(); ++i) {

@@ -1,20 +1,40 @@
-#define PY_SSIZE_T_CLEAN
-#include <Python.h>
 #include <vector>
 #include <iostream>
 #include <string>
 #include <cstdio>
 
+#include "../src/DynamicLib.cc"
+
 int main(int argc, const char* const* argv) {
 	int ret = 0;
 	std::vector<std::string> args {argv, argv + argc};
 
-	if (args.size() != 2) {
+	DynamicLib lib {std::move(args[1])};
+	auto Py_DecodeLocale = lib.get
+		<wchar_t* (*)(const char*, size_t *)>
+		("Py_DecodeLocale");
+	auto Py_SetProgramName = lib.get
+		<void (*)(const wchar_t *)>
+		("Py_SetProgramName");
+	auto Py_Initialize = lib.get
+		<void (*)(void)>
+		("Py_Initialize");
+	auto PyRun_SimpleFile = lib.get
+		<int (*)(FILE *, const char *)>
+		("PyRun_SimpleFile");
+	auto Py_FinalizeEx = lib.get
+		<int (*)(void)>
+		("Py_FinalizeEx");
+	auto PyMem_RawFree = lib.get
+		<void (*)(void*)>
+		("PyMem_RawFree");
+
+	if (args.size() != 3) {
 		std::cerr << "Incorrect usage" << std::endl;
 		ret = 1;
 	} else {
 
-		std::string path = std::move(args[1]);
+		std::string path = std::move(args[2]);
 
 		wchar_t* const program = Py_DecodeLocale(args[0].c_str(), NULL);
 		if (program == NULL) {
