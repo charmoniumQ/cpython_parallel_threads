@@ -11,12 +11,12 @@ LDLIBS += -ldl -ltbb
 # this way, the executable ends in a known suffix
 # so I can easily identify them in .gitignore and make clean
 %.exe: %.cc
-	$(LINK.cc) $^ $(LOADLIBES) $(LDLIBS) -o $@
+	$(LINK.cc) $^ $(CFLAGS) $(LOADLIBES) $(LDLIBS) -o $@
 
 %.so: %.cc
 	$(CXX) $(CFLAGS) $(CPPFLAGS) $(TARGET_ARCH) $(SHLIBFLAGS) -o $@ $^
 
-%.log: %.exe $(lastword $(MAKEFILE_LIST))
+%.log: %.exe
 	./$< | tee $@
 
 .PHONY: %.run
@@ -43,4 +43,4 @@ tests: src/exec_sharing.exe
 	true
 
 .PHONY: all
-all: src/exec_sharing.exe tests
+all: exec_sharing.exe tests

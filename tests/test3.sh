@@ -5,15 +5,16 @@ cd $(dirname "$0")/..
 
 CFLAGS="$(python3.7-config --ldflags) $(python3.7-config --cflags)"
 CFLAGS="${CFLAGS}" make tests/test3.so
+# make tests/test3.so
 
-rm python1.so python2.so
+rm -f python1.so python2.so
 cp /usr/lib/x86_64-linux-gnu/libpython3.7m.so.1.0 python1.so
 cp python1.so python2.so
 
 log=$(mktemp)
 ./src/exec_sharing.exe \
-	tests/test4.so ${PWD}/python1.so tests/test3.py \; \
-	tests/test4.so ${PWD}/python2.so tests/test3.py 2>&1 \
+	${PWD}/tests/test3.so ${PWD}/python1.so tests/test3.py \;   \
+	${PWD}/tests/test3.so ${PWD}/python2.so tests/test3.py 2>&1 \
 	| sort | tee "${log}"
 
 # same pid, different tid, same rand
