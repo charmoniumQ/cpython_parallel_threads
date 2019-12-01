@@ -4,7 +4,7 @@ set -e -x
 cd $(dirname "$0")/..
 
 make tests/test2.so
-cp tests/test2.so tests/test2_b.so
+ln tests/test2.so tests/test2_b.so
 
 log=$(mktemp)
 ./src/exec_sharing.exe tests/test2.so \; tests/test2_b.so 2>&1 \
