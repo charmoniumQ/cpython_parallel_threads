@@ -58,7 +58,9 @@ int main(int argc, char** argv) {
 
 		Py_SetProgramName(program);
 		Py_Initialize();
+
 		if (path == "-c") {
+
 			std::string prog = get_and_pop_front(args);
 			char* prog_c_str = new char[prog.size() + 1];
 			strcpy(prog_c_str, prog.c_str());
@@ -67,7 +69,9 @@ int main(int argc, char** argv) {
 			if (ret != 0) {
 				std::cerr << "program returned " << ret << std::endl;
 			}
+
 		} else {
+
 			FILE* fp = std::fopen(path.c_str(), "r");
 			if (fp == NULL) {
 				std::cerr << "fopen \"" << path << "\" failed: "
@@ -80,6 +84,7 @@ int main(int argc, char** argv) {
 				}
 				fclose(fp);
 			}
+
 		}
 
 		if (Py_FinalizeEx()) {
