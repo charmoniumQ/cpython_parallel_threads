@@ -3,14 +3,11 @@
 set -e -x
 cd $(dirname "$0")/..
 
-rm -f python1.so python2.so
-cp /usr/lib/x86_64-linux-gnu/libpython3.7m.so.1.0 python1.so
-ln python1.so python2.so
-
+# test -c STRING and FILE execution modes
 log=$(mktemp)
 ./src/exec_sharing.exe \
-	${PWD}/src/run_python.so ${PWD}/python1.so tests/test3.py \;   \
-	${PWD}/src/run_python.so ${PWD}/python2.so tests/test3.py 2>&1 \
+	src/run_python2.so           tests/test3.py   \;   \
+	src/run_python2.so -c "$(cat tests/test3.py)" 2>&1 \
 	| sort | tee "${log}"
 
 # same pid, different tid, same rand

@@ -1,7 +1,12 @@
 #ifndef UTIL_HH__
 #define UTIL_HH__
 
+#include <algorithm>
+#include <cassert>
+#include <filesystem>
+#include <random>
 #include <sstream>
+#include <string>
 
 template<typename InputIt, typename OutputStream>
 void join(OutputStream& stream,
@@ -52,6 +57,32 @@ std::string join(InputContainer container,
 	std::ostringstream os;
 	join(os, container.cbegin(), container.cend(), begin_tok, separator, end_tok);
 	return os.str();
+}
+
+std::string random_string(size_t length) {
+	static auto& chrs = "0123456789"
+	    "abcdefghijklmnopqrstuvwxyz"
+	    "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+	static std::random_device rd;
+	static std::uniform_int_distribution<size_t> pick{0, sizeof(chrs) - 1};
+
+	// Note that {length, '\0'} tries to use an initializer list
+	// which is not what I want
+	std::string str(length, '\0');
+    std::generate_n(str.begin(), length, []{ return chrs[pick(rd)]; });
+	return str;
+}
+
+std::filesystem::path quick_tmp_copy(const std::filesystem::path& file) {
+	using namespace std::filesystem;
+	path tmp_file = temp_directory_path() / random_string(20);
+	try {
+		create_hard_link(file, tmp_file);
+	} catch(const filesystem_error& e) {
+		assert(static_cast<std::string>(file).substr(0, 4) != "/tmp");
+		copy_file(file, tmp_file);
+	}
+	return tmp_file;
 }
 
 #endif

@@ -7,7 +7,7 @@
 #include "util.hh"
 
 int run_main(const std::vector<std::string>& args) {
-	DynamicLib lib {args[0]};
+	DynamicLib lib {quick_tmp_copy(args[0])};
 
 	typedef int(*main_method)(int, char**);
 	main_method this_main = lib.get<main_method>("main");

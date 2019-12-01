@@ -8,7 +8,7 @@ class DynamicLib {
 	void* dllib = NULL;
 public:
 
-	DynamicLib(std::string path) {
+	DynamicLib(const std::string& path) {
 		char* error;
 		dllib = dlopen(path.c_str(), RTLD_LAZY | RTLD_LOCAL);
 		if ((error = dlerror()) != NULL || !dllib)
@@ -25,7 +25,7 @@ public:
 				<< std::endl;
 	}
 
-	void* operator[](std::string symbol_name) {
+	void* operator[](const std::string& symbol_name) {
 		char* error;
 		void* symbol = dlsym(dllib, symbol_name.c_str());
 		if ((error = dlerror()) != NULL)
@@ -35,8 +35,8 @@ public:
 	}
 
 	template <typename T>
-	T get(std::string symbol_name) {
-		return (T) (*this)[symbol_name];
+	T get(const std::string& symbol_name) {
+		return reinterpret_cast<T>((*this)[symbol_name]);
 	}
 
 };
