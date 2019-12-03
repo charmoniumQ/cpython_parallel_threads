@@ -85,4 +85,22 @@ std::filesystem::path quick_tmp_copy(const std::filesystem::path& file) {
 	return tmp_file;
 }
 
+template <typename Container>
+char** strings2char_pptr(const Container& args) {
+	char** argv = new char*[args.size()];
+	for (size_t i = 0; i < args.size(); ++i) {
+		argv[i] = new char[args[i].size() + 1];
+		std::copy(args[i].cbegin(), args[i].cend(), argv[i]);
+		argv[i][args[i].size()] = '\0';
+	}
+	return argv;
+}
+
+void free_char_pptr(size_t length, char** pptr) {
+	for (size_t i = 0; i < length; ++i) {
+		delete[] pptr[i];
+	}
+	delete[] pptr;
+}
+
 #endif

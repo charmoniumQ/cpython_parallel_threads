@@ -12,21 +12,9 @@ int run_main(const std::vector<std::string>& args) {
 	typedef int(*main_method)(int, char**);
 	main_method this_main = lib.get<main_method>("main");
 
-    char** argv = new char*[args.size()];
-	for (size_t i = 0; i < args.size(); ++i) {
-		argv[i] = new char[args[i].size() + 1];
-
-		// this_main() could modify, so args[i].c_str won't work.
-		std::copy(args[i].cbegin(), args[i].cend(), argv[i]);
-		argv[i][args[i].size()] = '\0';
-	}
-
+	char** argv = strings2char_pptr(args);
 	int ret = this_main(args.size(), argv);
-
-	for (size_t i = 0; i < args.size(); ++i) {
-		delete[] argv[i];
-	}
-	delete[] argv;
+	free_char_pptr(args.size(), argv);
 
 	return ret;
 }
@@ -95,12 +83,12 @@ int main(int argc, char* const argv[]) {
 				ret = run_main(sub_arg);
 			} catch (const std::runtime_error& e) {
 				std::cout << "load ";
-				join(std::cout, sub_arg.begin(), sub_arg.end(), "\"", "\", \"", "\" ");
+				join(std::cout, sub_arg, "\"", "\", \"", "\" ");
 				std::cout << "failed: " << e.what() << std::endl;
 			}
 
 			if (ret != 0) {
-				join(std::cout, sub_arg.begin(), sub_arg.end(), "\"", "\", \"", "\" ");
+				join(std::cout, sub_arg, "\"", "\", \"", "\" ");
 				std::cout << "returned " << ret << std::endl;
 			}
 		}

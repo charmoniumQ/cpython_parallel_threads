@@ -1,7 +1,7 @@
 CC = clang
 CXX = clang++
 CFLAGS += -g -Og -Wall -Wextra
-#-fsanitize=address -fsanitize=undefined
+#  -fsanitize=undefined -fsanitize=address
 CPPFLAGS += -std=c++2a
 SHLIBFLAGS += -fPIC -rdynamic -shared
 # -fno-gnu-unique
@@ -15,6 +15,12 @@ LDLIBS += -ldl -ltbb
 
 %.so: %.cc
 	$(CXX) $(CFLAGS) $(CPPFLAGS) $(TARGET_ARCH) $(SHLIBFLAGS) -o $@ $^
+
+src/libpat.so: src/libpat.cc
+	$(CXX) -shared -Wl,-soname,$(shell basename $@) -fPIC  $(CFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -lboost_python37 $(shell python3-config --cflags --ldflags) -o $@ $^
+# special case, because I use Boost.Python
+# https://stackoverflow.com/a/3881479/1078199
+# https://stackoverflow.com/q/10968309/1078199
 
 %.log: %.exe
 	./$< | tee $@
@@ -36,10 +42,11 @@ clean:
 	true
 
 .PHONY: tests
-tests: src/exec_sharing.exe src/run_python2.so
+tests: src/exec_sharing.exe src/run_python2.so src/libpat.so
 	./tests/test1.sh && \
 	./tests/test2.sh && \
 	./tests/test3.sh && \
+	./tests/test4.sh && \
 	true
 
 .PHONY: all

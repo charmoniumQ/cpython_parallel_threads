@@ -12,8 +12,8 @@ public:
 		char* error;
 		dllib = dlopen(path.c_str(), RTLD_LAZY | RTLD_LOCAL);
 		if ((error = dlerror()) != NULL || !dllib)
-			throw std::runtime_error(
-				"dlopen(): " + (error == NULL ? "NULL" : std::string{error}));
+			throw std::runtime_error{
+				"dlopen(): " + (error == NULL ? "NULL" : std::string{error})};
 	}
 
 	~DynamicLib() {
@@ -29,8 +29,8 @@ public:
 		char* error;
 		void* symbol = dlsym(dllib, symbol_name.c_str());
 		if ((error = dlerror()) != NULL)
-			throw std::runtime_error(
-				"dlsym(): " + (error == NULL ? "NULL" : std::string{error}));
+			throw std::runtime_error{
+				"dlsym(): " + (error == NULL ? "NULL" : std::string{error})};
 		return symbol;
 	}
 

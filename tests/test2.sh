@@ -5,9 +5,9 @@ cd $(dirname "$0")/..
 
 make tests/test2.so
 
-log=$(mktemp)
-./src/exec_sharing.exe tests/test2.so \; tests/test2.so 2>&1 \
-	| tee "${log}"
+log="$(mktemp)"
+./src/exec_sharing.exe tests/test2.so \; tests/test2.so \
+	 2>&1 | tee "${log}"
 
 # 2 dtors/ctors ran
 test $(grep ctor "${log}" | wc -l) -eq 2
