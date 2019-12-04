@@ -14,33 +14,32 @@
 #define PY_VERSION_HEX 0x03700000
 #include <boost/python.hpp>
 
-#include "DynamicLib.cc"
+#include "DynamicLib.hh"
 #include "util.hh"
+
+std::string python_so = "/usr/lib/x86_64-linux-gnu/libpython3.7m.so";
 
 namespace py = boost::python;
 
 class ProcessAsThread {
 private:
-	typedef int(*main_method)(int, char**);
 	int argc;
 	char** argv;
 	DynamicLib lib;
-	main_method main;
 	std::future<int> return_code;
 public:
 
 	ProcessAsThread(const py::list& cmd)
 		: argc(len(cmd))
 		, argv(init_argv(argc, cmd))
-		, lib({quick_tmp_copy(argv[0])})
-		, main(init_main(lib))
-		, return_code(init_return_code(main, argc, argv))
-	{}
+		, lib({quick_tmp_copy(argv[0], 10, "foo", ".so")})
+		, return_code(std::async(lib.get<int (*)(int, char**)>("main"), argc, argv))
+	{ }
 
-	char** init_argv(int argc, const py::list& cmd) {
+	static char** init_argv(int argc, const py::list& cmd) {
 		char** out = new char*[argc];
 		for (int i = 0; i < argc; ++i) {
-			const char* arg = py::extract<char const*>(cmd[i]);
+			char const* arg = py::extract<char const*>(cmd[i]);
 			int arg_size = strlen(arg) + 1;
 			out[i] = new char[arg_size];
 			memcpy(out[i], arg, arg_size);
@@ -48,15 +47,61 @@ public:
 		return out;
 	}
 
-	static main_method init_main(DynamicLib& lib) {
-		return lib.get<main_method>("main");
-	}
-
-	static std::future<int> init_return_code(main_method& main, int argc, char** argv) {
-		return std::async(main, argc, argv);
-	}
-
 	~ProcessAsThread() {
+		for (int i = 0; i < argc; ++i) {
+			delete[] argv[i];
+		}
+		delete[] argv;
+	}
+
+	/*
+	  Waits for timeout and then gets return_code
+	  Wait can be 0, a positive real, or infinity.
+	 */
+	std::optional<int> wait(float timeout) {
+		assert(timeout > 0);
+		auto status = std::isinf(timeout)
+			? ({return_code.wait(); std::future_status::ready;})
+			: return_code.wait_for(std::chrono::microseconds{static_cast<long>(timeout*1e6)})
+			;
+		switch(status) {
+		case std::future_status::deferred:
+			throw std::runtime_error{"Thread should not be deferred"};
+		case std::future_status::timeout:
+			return {};
+		case std::future_status::ready:
+			return return_code.get();
+		}
+	}
+};
+
+class PythonProcessAsThread {
+private:
+	int argc;
+	wchar_t** argv;
+	DynamicLib lib;
+	std::future<int> return_code;
+public:
+
+	PythonProcessAsThread(const py::list& cmd)
+		: argc(len(cmd))
+		, argv(init_argv(argc, cmd))
+		, lib({quick_tmp_copy(python_so, 10, "foo", ".so")})
+		, return_code(std::async(lib.get<int (*)(int, wchar_t**)>("Py_Main"), argc, argv))
+	{ }
+
+	static wchar_t** init_argv(int argc, const py::list& cmd) {
+		wchar_t** out = new wchar_t*[argc];
+		for (int i = 0; i < argc; ++i) {
+			char const* arg = py::extract<char const*>(cmd[i]);
+			int arg_size = strlen(arg) * 4;
+			out[i] = new wchar_t[arg_size];
+			mbstowcs(out[i], arg, arg_size);
+		}
+		return out;
+	}
+
+	~PythonProcessAsThread() {
 		for (int i = 0; i < argc; ++i) {
 			delete[] argv[i];
 		}
@@ -149,6 +194,13 @@ BOOST_PYTHON_MODULE(libpat) {
 			"ProcessAsThread",
 			py::init<py::list>())
 		.def("wait", &ProcessAsThread::wait,
+			 py::return_value_policy<return_optional>())
+	;
+
+	py::class_<PythonProcessAsThread, boost::noncopyable>(
+			"PythonProcessAsThread",
+			py::init<py::list>())
+		.def("wait", &PythonProcessAsThread::wait,
 			 py::return_value_policy<return_optional>())
 	;
 }

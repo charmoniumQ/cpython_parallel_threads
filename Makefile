@@ -44,7 +44,7 @@ clean:
 	true
 
 .PHONY: tests
-tests: src/exec_sharing.exe src/run_python2.so src/libpat.so
+tests: src/exec_sharing.exe src/run_python2.so src/run_python2.exe src/libpat.so
 	./tests/test1.sh && \
 	./tests/test2.sh && \
 	./tests/test3.sh && \
