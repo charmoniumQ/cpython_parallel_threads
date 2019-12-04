@@ -6,18 +6,20 @@ CPPFLAGS += -std=c++2a
 SHLIBFLAGS += -fPIC -rdynamic -shared
 # -fno-gnu-unique
 LDLIBS += -ldl -ltbb
+DEPS = src/DynamicLib.cc src/util.cc src/DynamicLib.hh src/util.hh
+
 
 # copied from `make -p | grep '%: %.c$' -A 3`
 # this way, the executable ends in a known suffix
 # so I can easily identify them in .gitignore and make clean
-%.exe: %.cc
-	$(LINK.cc) $^ $(CFLAGS) $(LOADLIBES) $(LDLIBS) -o $@
+%.exe: %.cc $(DEPS)
+	$(LINK.cc) $(filter %.cc,$^) $(CFLAGS) $(LOADLIBES) $(LDLIBS) -o $@
 
-%.so: %.cc
-	$(CXX) $(CFLAGS) $(CPPFLAGS) $(TARGET_ARCH) $(SHLIBFLAGS) -o $@ $^
+%.so: %.cc $(DEPS)
+	$(CXX) $(CFLAGS) $(CPPFLAGS) $(TARGET_ARCH) $(SHLIBFLAGS) -o $@ $(filter %.cc,$^)
 
-src/libpat.so: src/libpat.cc
-	$(CXX) -shared -Wl,-soname,$(shell basename $@) -fPIC  $(CFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -lboost_python37 $(shell python3-config --cflags --ldflags) -o $@ $^
+src/libpat.so: src/libpat.cc $(DEPS)
+	$(CXX) -shared -Wl,-soname,$(shell basename $@) -fPIC  $(CFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -lboost_python37 $(shell python3-config --cflags --ldflags) -o $@ $(filter %.cc,$^)
 # special case, because I use Boost.Python
 # https://stackoverflow.com/a/3881479/1078199
 # https://stackoverflow.com/q/10968309/1078199

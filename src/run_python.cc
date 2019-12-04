@@ -3,7 +3,7 @@
 #include <cstdio>
 #include <cstring>
 
-#include "DynamicLib.cc"
+#include "DynamicLib.hh"
 #include "util.hh"
 
 template <typename T>

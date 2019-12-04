@@ -2,7 +2,7 @@
 #include <cstdlib>
 #include <iostream>
 
-#include "DynamicLib.cc"
+#include "DynamicLib.hh"
 #include "util.hh"
 
 int main(int argc, char** argv) {

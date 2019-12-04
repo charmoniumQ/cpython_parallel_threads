@@ -10,3 +10,5 @@ auto/
 *.blg
 *.bbl
 *.exe
+
+__pycache__/

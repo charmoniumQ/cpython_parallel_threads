@@ -3,7 +3,8 @@
 #include <assert.h>
 #include <algorithm>
 #include <execution>
-#include "DynamicLib.cc"
+
+#include "DynamicLib.hh"
 #include "util.hh"
 
 int run_main(const std::vector<std::string>& args) {
