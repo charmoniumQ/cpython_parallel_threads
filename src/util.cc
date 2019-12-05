@@ -1,3 +1,6 @@
+#include <utility>
+#include <cstdlib>
+
 #include "util.hh"
 
 std::string random_string(size_t length) {

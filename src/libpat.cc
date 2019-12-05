@@ -14,10 +14,8 @@
 #define PY_VERSION_HEX 0x03700000
 #include <boost/python.hpp>
 
-#include "DynamicLib.hh"
+#include "dynamic_lib.hh"
 #include "util.hh"
-
-std::string python_so = "/usr/lib/x86_64-linux-gnu/libpython3.7m.so";
 
 namespace py = boost::python;
 
@@ -25,14 +23,14 @@ class ProcessAsThread {
 private:
 	int argc;
 	char** argv;
-	DynamicLib lib;
+	dynamic_libs lib;
 	std::future<int> return_code;
 public:
 
 	ProcessAsThread(const py::list& cmd)
 		: argc(len(cmd))
 		, argv(init_argv(argc, cmd))
-		, lib({quick_tmp_copy(argv[0], 10, "foo", ".so")})
+		, lib(dynamic_libs::create({{argv[0], {"main"}}}))
 		, return_code(std::async(lib.get<int (*)(int, char**)>("main"), argc, argv))
 	{ }
 
@@ -79,14 +77,17 @@ class PythonProcessAsThread {
 private:
 	int argc;
 	wchar_t** argv;
-	DynamicLib lib;
+	dynamic_libs lib;
 	std::future<int> return_code;
 public:
 
 	PythonProcessAsThread(const py::list& cmd)
 		: argc(len(cmd))
 		, argv(init_argv(argc, cmd))
-		, lib({quick_tmp_copy(python_so, 10, "foo", ".so")})
+		, lib(dynamic_libs::create({
+			{"/usr/lib/x86_64-linux-gnu/libpython3.7m.so", {"Py_Main"}},
+			{"/usr/lib/python3.7/lib-dynload/_queue.cpython-37m-x86_64-linux-gnu.so", {}},
+		}))
 		, return_code(std::async(lib.get<int (*)(int, wchar_t**)>("Py_Main"), argc, argv))
 	{ }
 

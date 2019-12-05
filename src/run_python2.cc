@@ -2,7 +2,7 @@
 #include <cstdlib>
 #include <iostream>
 
-#include "DynamicLib.hh"
+#include "dynamic_lib.hh"
 #include "util.hh"
 
 int main(int argc, char** argv) {
@@ -10,7 +10,7 @@ int main(int argc, char** argv) {
 	// TODO: get this value programatically by
 	// $ sbin/ldconfig -p | grep -o '\S*libpython3.7m.so$'
 	// overridable by env var
-	DynamicLib lib {quick_tmp_copy(python_so)};
+	dynamic_libs lib = dynamic_libs::create({{python_so, {"Py_Main"}}});
 
 	auto Py_Main = lib.get
 		<int (*)(int, wchar_t**)>

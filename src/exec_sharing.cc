@@ -4,11 +4,18 @@
 #include <algorithm>
 #include <execution>
 
-#include "DynamicLib.hh"
+#include "dynamic_lib.hh"
 #include "util.hh"
 
 int run_main(const std::vector<std::string>& args) {
-	DynamicLib lib {quick_tmp_copy(args[0])};
+	dynamic_libs lib = dynamic_libs::create({
+		{"/lib64/ld-linux-x86-64.so.2", {}},
+		{"/lib/x86_64-linux-gnu/libc.so.6", {}},
+		{"/lib/x86_64-linux-gnu/libm.so.6", {}},
+		{"/lib/x86_64-linux-gnu/libgcc_s.so.1", {}},
+		{"/usr/lib/x86_64-linux-gnu/libstdc++.so.6", {}},
+		{args[0], {"main"}},
+		});
 
 	typedef int(*main_method)(int, char**);
 	main_method this_main = lib.get<main_method>("main");
