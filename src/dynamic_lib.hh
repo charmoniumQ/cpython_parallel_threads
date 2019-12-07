@@ -1,15 +1,20 @@
 #ifndef DYNAMICLIB_HH__
 #define DYNAMICLIB_HH__
 
+#include <dlfcn.h>
 #include <string>
+
 #include "util.hh"
+
+class dynamic_libs;
 
 class dynamic_lib : protected unique_void_ptr {
 private:
-	void* create(const std::string& path);
+	void* create(const std::string& path, const std::string& name, Lmid_t ns);
 	std::string name;
+	friend class dynamic_libs;
 public:
-	dynamic_lib(const std::string& path);
+	dynamic_lib(const std::string& path, const std::string& name, Lmid_t ns);
 	dynamic_lib(dynamic_lib&& other);
 	dynamic_lib& operator=(dynamic_lib&& other);
 	~dynamic_lib();

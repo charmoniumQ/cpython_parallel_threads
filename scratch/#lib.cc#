@@ -1,0 +1,17 @@
+#include <cstdio>
+#include <iostream>
+
+static void ctor(void) __attribute__((constructor));
+static void ctor(void) {
+	printf("ctor printf\n");
+	std::cout << "ctor\n";
+}
+static void dtor(void) __attribute__((destructor));
+static void dtor(void) {
+	std::cout << "dtor\n";
+}
+
+int main() {
+	std::cout << "main\n";
+	return 0;
+}

@@ -37,10 +37,10 @@ DEPS = src/dynamic_lib.cc src/util.cc src/dynamic_lib.hh src/util.hh
 
 .PHONY: clean
 clean:
-	find . -name '*.log' -print0 | xargs -0 rm -f ; \
-	find . -name '*.exe' -print0 | xargs -0 rm -f ; \
-	find . -name '*.o'   -print0 | xargs -0 rm -f ; \
-	find . -name '*.so'  -print0 | xargs -0 rm -f ; \
+	find . -name '*.log' -delete ; \
+	find . -name '*.exe' -delete ; \
+	find . -name '*.o'   -delete ; \
+	find . -name '*.so'  -delete ; \
 	true
 
 .PHONY: tests

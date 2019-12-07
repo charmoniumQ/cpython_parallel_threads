@@ -3,12 +3,12 @@
 #include <cstdio>
 #include <cstring>
 
-#include "DynamicLib.hh"
+#include "dynamic_lib.hh"
 #include "util.hh"
 
 template <typename T>
 T get_and_pop_front(std::deque<T>& it) {
-	T r = std::move(it[0]);
+	T r = std::move(it.at(0));
 	it.pop_front();
 	return r;
 }
@@ -19,12 +19,23 @@ int main(int argc, char** argv) {
 	std::deque<std::string> args {argv, argv + argc};
 
 	std::string prog_name = get_and_pop_front(args);
+	std::cout << "0 " << args.at(0) << std::endl;
 
 	std::string python_so = "/usr/lib/x86_64-linux-gnu/libpython3.7m.so";
 	// TODO: get this value programatically by
 	// $ sbin/ldconfig -p | grep -o '\S*libpython3.7m.so$'
 	// overridable by env var
-	DynamicLib lib {quick_tmp_copy(python_so)};
+	dynamic_libs lib = dynamic_libs::create({
+		{python_so, {
+			"Py_DecodeLocale",
+			"Py_SetProgramName",
+			"Py_Initialize",
+			"PyRun_SimpleFile",
+			"Py_FinaleEx",
+			"PyMem_RawFree",
+			"PyRun_SimpleString",
+		}},
+	});
 
 	auto Py_DecodeLocale = lib.get
 		<wchar_t* (*)(const char*, size_t *)>
@@ -46,9 +57,11 @@ int main(int argc, char** argv) {
 		("PyMem_RawFree");
 	auto PyRun_SimpleString = lib.get
 		<int (*)(const char*)>
-		("PyMem_RawFree");
+		("PyRun_SimpleString");
 
+	std::cout << "1 " << args.at(0) << std::endl;
 	std::string path = get_and_pop_front(args);
+	std::cout << "2 " << args.at(0) << std::endl;
 
 	wchar_t* const program = Py_DecodeLocale(prog_name.c_str(), NULL);
 	if (program == NULL) {
