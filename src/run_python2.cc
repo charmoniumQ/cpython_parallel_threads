@@ -6,12 +6,13 @@
 #include "util.hh"
 
 int main(int argc, char** argv) {
-	std::string python_so = "/usr/lib/x86_64-linux-gnu/libpython3.7m.so";
+	// std::string python_so = "/usr/lib/x86_64-linux-gnu/libpython3.7m.so";
+	std::string python_so = "/tmp/foo/libpython_1.so";
 	// TODO: get this value programatically by
 	// $ sbin/ldconfig -p | grep -o '\S*libpython3.7m.so$'
 	// overridable by env var
 	dynamic_libs lib = dynamic_libs::create({
-		{python_so, {"Py_Main"}},
+		{python_so, {}},
 	});
 
 	// auto Py_Main = lib.get
@@ -29,8 +30,9 @@ int main(int argc, char** argv) {
 	std::cout << "running "
 			  // << ((void*)Py_Main)
 			  << std::endl;
-	// int ret = Py_Main(argc, argw);
-	int ret =0 ;
+	int ret =
+		// Py_Main(argc, argw);
+		0;
 	std::cout << "ran\n";
 
 	for (int i = 0; i < argc; ++i) {

@@ -6,20 +6,12 @@
 #include "dynamic_lib.hh"
 #include "util.hh"
 
-template <typename T>
-T get_and_pop_front(std::deque<T>& it) {
-	T r = std::move(it.at(0));
-	it.pop_front();
-	return r;
-}
-
 int main(int argc, char** argv) {
 	int ret = 0;
 
 	std::deque<std::string> args {argv, argv + argc};
 
 	std::string prog_name = get_and_pop_front(args);
-	std::cout << "0 " << args.at(0) << std::endl;
 
 	std::string python_so = "/usr/lib/x86_64-linux-gnu/libpython3.7m.so";
 	// TODO: get this value programatically by
@@ -31,7 +23,7 @@ int main(int argc, char** argv) {
 			"Py_SetProgramName",
 			"Py_Initialize",
 			"PyRun_SimpleFile",
-			"Py_FinaleEx",
+			"Py_FinalizeEx",
 			"PyMem_RawFree",
 			"PyRun_SimpleString",
 		}},
@@ -59,9 +51,7 @@ int main(int argc, char** argv) {
 		<int (*)(const char*)>
 		("PyRun_SimpleString");
 
-	std::cout << "1 " << args.at(0) << std::endl;
 	std::string path = get_and_pop_front(args);
-	std::cout << "2 " << args.at(0) << std::endl;
 
 	wchar_t* const program = Py_DecodeLocale(prog_name.c_str(), NULL);
 	if (program == NULL) {

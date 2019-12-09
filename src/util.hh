@@ -114,5 +114,24 @@ public:
 	const void* operator*() const { return data; }
 };
 
+template <typename Container>
+typename Container::value_type get_and_pop_front(Container& it) {
+	auto r = std::move(it.at(0));
+	it.pop_front();
+	return r;
+}
+
+template <typename Container>
+bool try_erase(Container& container, const typename Container::key_type& key) {
+	auto key_it = container.find(key);
+	if (key_it != container.end()) {
+		container.erase(key_it);
+		return true;
+	} else {
+		return false;
+	}
+}
+
+std::string ptr2string(void* ptr);
 
 #endif

@@ -3,21 +3,18 @@
 
 #include "dynamic_lib.hh"
 
-#include <chrono>
-#include <thread>
-#include <unistd.h>
-#include <sys/syscall.h>
+#include <mutex>
+std::mutex mutex;
+
+// #include <chrono>
+// #include <thread>
+// #include <sys/syscall.h>
 
 void* dynamic_lib::create(const std::string& path, const std::string& name, Lmid_t ns) {
-	std::cout << ("create " + name + " -> " + path + " " + (ns == LM_ID_NEWLM ? "LM_ID_NEWLM" : std::to_string(ns)) + " " + std::to_string(syscall(SYS_gettid))+ "\n");
-	
-	using namespace std::chrono_literals;
-	std::this_thread::sleep_for((syscall(SYS_gettid) / 500) * 1ms);
+	std::cout << ("create " + name + " -> " + path + "\n");
+	// using namespace std::chrono_literals;
+	// std::this_thread::sleep_for((syscall(SYS_gettid) / 500) * 1ms);
 	void* data = dlmopen(ns, path.c_str(), RTLD_LAZY | RTLD_LOCAL);
-	if (name.find("libpython") != std::string::npos) {
-		std::cout << "l " << name << std::endl;
-		return nullptr;
-	}
 	char* error = dlerror();
 	if (error != NULL || !data)
 		throw std::runtime_error{"dlmopen: " + path + ": "
@@ -49,6 +46,7 @@ dynamic_lib::~dynamic_lib() {
 
 const shared_void_ptr dynamic_lib::operator[](const std::string& symbol_name) const {
 	void* symbol = dlsym(data, symbol_name.c_str());
+	std::cout << ("dlsym " + name + " {name: " + symbol_name + ", ptr: " + ptr2string(symbol) + "}\n");
 	char* error = dlerror();
 	if (error != NULL)
 		throw std::runtime_error{"dlsym: " + name + ": " + symbol_name
@@ -59,6 +57,8 @@ const shared_void_ptr dynamic_lib::operator[](const std::string& symbol_name) co
 dynamic_libs dynamic_libs::create(
 	const std::vector<std::pair<std::string, std::vector<std::string>>>& paths_and_symbols) {
 
+	const std::lock_guard<std::mutex> lock(mutex);
+
 	std::vector<dynamic_lib> dllibs;
 	// dllibs.reserve(paths_and_symbols.size());
 	std::unordered_map<std::string, const shared_void_ptr> symbols;
@@ -66,11 +66,16 @@ dynamic_libs dynamic_libs::create(
 	Lmid_t ns = LM_ID_NEWLM;
 
 	for (const auto& path_and_symbols : paths_and_symbols) {
-		dynamic_lib dlib {quick_tmp_copy(path_and_symbols.first, 10, "foo", ".so"), path_and_symbols.first, ns};
-		if (*dlib == nullptr) continue; // TODO: rmove this lein
-		dlinfo(*dlib, RTLD_DI_LMID, &ns);
+		std::string path = quick_tmp_copy(path_and_symbols.first, 10, "foo", ".so");
+		std::cout << ("dlopen for " + path_and_symbols.first + " " + path + "\n");
+		dynamic_lib dlib {path, path_and_symbols.first, ns};
+		if (ns == LM_ID_NEWLM && paths_and_symbols.size() > 1) {
+			dlinfo(*dlib, RTLD_DI_LMID, &ns);
+		}
+		std::cout << ("dlopen " + path_and_symbols.first + " {ns: " + std::to_string(ns) + ", ptr: " + ptr2string(*dlib) + ", path: " + path + "}\n");
+
 		for (const std::string& symbol : path_and_symbols.second) {
-			symbols.erase(symbol);
+			try_erase(symbols, symbol);
 			// emplace lets us construct a const shared_void_ptr
 			symbols.emplace(symbol, dlib[symbol]);
 		}
@@ -85,4 +90,8 @@ dynamic_libs::dynamic_libs(std::vector<dynamic_lib>&& dllibs_, std::unordered_ma
 
 const shared_void_ptr dynamic_libs::operator[](const std::string& symbol_name) const {
 	return symbols.at(symbol_name);
+}
+
+dynamic_libs::~dynamic_libs() {
+	const std::lock_guard<std::mutex> lock(mutex);
 }

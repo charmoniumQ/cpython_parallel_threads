@@ -29,6 +29,7 @@ class dynamic_libs {
 	dynamic_libs(std::vector<dynamic_lib>&& dllibs_, std::unordered_map<std::string, const shared_void_ptr>&& symbols_);
 
 public:
+	~dynamic_libs();
 
 	static dynamic_libs create(const std::vector<std::pair<std::string, std::vector<std::string>>>& paths_and_symbols);
 
