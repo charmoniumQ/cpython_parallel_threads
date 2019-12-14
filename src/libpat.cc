@@ -58,7 +58,7 @@ public:
 	  Waits for timeout and then gets return_code
 	  Wait can be 0, a positive real, or infinity.
 	 */
-	std::optional<int> wait(float timeout) {
+	py::object wait(float timeout) {
 		assert(timeout > 0);
 		auto status = std::isinf(timeout)
 			? ({return_code.wait(); std::future_status::ready;})
@@ -70,9 +70,9 @@ public:
 		case std::future_status::deferred:
 			throw std::runtime_error{"Thread should not be deferred"};
 		case std::future_status::timeout:
-			return {};
+			return py::object{};
 		case std::future_status::ready:
-			return return_code.get();
+			return py::long_{return_code.get()};
 		}
 	}
 };
@@ -114,19 +114,21 @@ public:
 	  Waits for timeout and then gets return_code
 	  Wait can be 0, a positive real, or infinity.
 	 */
-	std::optional<int> wait(float timeout) {
+	py::object wait(float timeout) {
 		assert(timeout > 0);
 		auto status = std::isinf(timeout)
 			? ({return_code.wait(); std::future_status::ready;})
-			: return_code.wait_for(std::chrono::microseconds{static_cast<long>(timeout*1e6)})
+			: return_code.wait_for(
+								   // remember timeout is a real number of seconds
+								   std::chrono::microseconds{static_cast<long>(timeout*1e6)})
 			;
 		switch(status) {
 		case std::future_status::deferred:
 			throw std::runtime_error{"Thread should not be deferred"};
 		case std::future_status::timeout:
-			return {};
+			return py::object{};
 		case std::future_status::ready:
-			return return_code.get();
+			return py::long_{return_code.get()};
 		}
 	}
 };
@@ -137,96 +139,56 @@ private:
 
 public:
 	void push(py::object obj) {
+		// TODO: assess if I need this
+		py::incref(obj.ptr());
+		// I think I need to make sure Python doesn't delete this,
+		// even if it is not referenced in user code.
+		// Consider it referenced here.
 		_queue.wait_push(obj);
 	}
 	py::object pop() {
+		// TODO: assess if I need this
+		// py::decref(obj.ptr());
+		// I think I already increfed on push
+		// so obj's ref_count = references_already_in_user_code + 1
+		// and I am going to return it.
+		// So I think this is good.
 		return _queue.pull();
 	}
-	std::optional<py::object> try_pop() {
+	py::object try_pop() {
 		py::object obj;
-		bool success =
-			_queue.try_pull(obj) == bc::queue_op_status::success;
-		if (success) return {obj}; else return {};
+		bool success = _queue.try_pull(obj) == bc::queue_op_status::success;
+		if (success) {
+			// TODO: assess if I need this
+			// py::decref(obj.ptr());
+			// I think I already increfed on push
+			// so obj's ref_count = references_already_in_user_code + 1
+			// and I am going to return it.
+			// So I think this is good.
+			return obj;
+		}
+		else {
+			return py::object{};
+		}
 	}
 };
-
-// https://stackoverflow.com/a/26644530/1078199
-namespace detail {
-
-	/// @brief Type trait that determines if the provided type is
-	///        an optional.
-	template <typename>
-	struct is_optional : std::false_type {};
-	template <typename T>
-	struct is_optional<std::optional<T>> : std::true_type {};
-
-	/// @brief ResultConverter model that converts a optional object to
-	///        Python None if the object is empty (i.e. none) or defers
-	///        to Boost.Python to convert object to a Python object.
-	template <typename T> struct to_python_optional {
-
-		/// @brief Only supports converting Optional types.
-		/// @note This is checked at runtime.
-		bool convertible() const { return detail::is_optional<T>::value; }
-
-		/// @brief Convert optional object to Python None or a
-		///        Boost.Python object.
-		PyObject* operator()(const T& obj) const {
-			py::object result =
-				obj                    // If optional has a value, then
-				? py::object(*obj) // defer to Boost.Python converter.
-				: py::object()     // Otherwise, return Python None.
-				;
-
-			// The python::object contains a handle which functions as
-			// smart-pointer to the underlying PyObject.  As it will go
-			// out of scope, explicitly increment the PyObject's reference
-			// count, as the caller expects a non-borrowed (i.e. owned) reference.
-			return py::incref(result.ptr());
-		}
-
-		/// @brief Used for documentation.
-		const PyTypeObject* get_pytype() const { return nullptr; }
-
-	};
-}
-
-/// @brief Converts a optional to Python None if the object is
-///        equal to none.  Otherwise, defers to the registered
-///        type converter to returs a Boost.Python object.
-struct return_optional {
-	template <class T> struct apply {
-		// The to_python_optional ResultConverter only checks if T is convertible
-		// at runtime.  However, the following MPL branch cause a compile time
-		// error if T is not a optional by providing a type that is not a
-		// ResultConverter model.
-		typedef typename std::enable_if<
-			detail::is_optional<T>::value,
-			detail::to_python_optional<T>
-			>::type type;
-	};
-};
-
 
 BOOST_PYTHON_MODULE(libpat) {
 	py::class_<ProcessAsThread, boost::noncopyable>(
 			"ProcessAsThread",
 			py::init<py::list>())
-		.def("wait", &ProcessAsThread::wait,
-			 py::return_value_policy<return_optional>())
+		.def("wait", &ProcessAsThread::wait)
 	;
 
 	py::class_<PythonProcessAsThread, boost::noncopyable>(
 			"PythonProcessAsThread",
 			py::init<py::list>())
-		.def("wait", &PythonProcessAsThread::wait,
-			 py::return_value_policy<return_optional>())
+		.def("wait", &PythonProcessAsThread::wait)
 	;
 
 	py::class_<Queue, boost::noncopyable>("Queue", py::init<>())
 		.def("push", &Queue::push)
 		.def("pop", &Queue::pop)
-		.def("try_pop", &Queue::try_pop,
-			 py::return_value_policy<return_optional>())
+		.def("try_pop", &Queue::try_pop)
 	;
 }
