@@ -9,8 +9,7 @@
 #include <type_traits>
 #include <vector>
 
-#include <sys/wait.h>
-
+#include <boost/thread/sync_queue.hpp>
 #define PY_VERSION_HEX 0x03700000
 #include <boost/python.hpp>
 
@@ -20,6 +19,7 @@
 std::string python_so = "/usr/lib/x86_64-linux-gnu/libpython3.7m.so";
 
 namespace py = boost::python;
+namespace bc = boost::concurrent;
 
 class ProcessAsThread {
 private:
@@ -62,7 +62,9 @@ public:
 		assert(timeout > 0);
 		auto status = std::isinf(timeout)
 			? ({return_code.wait(); std::future_status::ready;})
-			: return_code.wait_for(std::chrono::microseconds{static_cast<long>(timeout*1e6)})
+			: return_code.wait_for(
+								   // remember timeout is a real number of seconds
+								   std::chrono::microseconds{static_cast<long>(timeout*1e6)})
 			;
 		switch(status) {
 		case std::future_status::deferred:
@@ -129,6 +131,25 @@ public:
 	}
 };
 
+class Queue {
+private:
+	bc::sync_queue<py::object> _queue;
+
+public:
+	void push(py::object obj) {
+		_queue.wait_push(obj);
+	}
+	py::object pop() {
+		return _queue.pull();
+	}
+	std::optional<py::object> try_pop() {
+		py::object obj;
+		bool success =
+			_queue.try_pull(obj) == bc::queue_op_status::success;
+		if (success) return {obj}; else return {};
+	}
+};
+
 // https://stackoverflow.com/a/26644530/1078199
 namespace detail {
 
@@ -146,7 +167,6 @@ namespace detail {
 
 		/// @brief Only supports converting Optional types.
 		/// @note This is checked at runtime.
-
 		bool convertible() const { return detail::is_optional<T>::value; }
 
 		/// @brief Convert optional object to Python None or a
@@ -166,10 +186,9 @@ namespace detail {
 		}
 
 		/// @brief Used for documentation.
-		const PyTypeObject* get_pytype() const { return 0; }
+		const PyTypeObject* get_pytype() const { return nullptr; }
 
 	};
-
 }
 
 /// @brief Converts a optional to Python None if the object is
@@ -201,6 +220,13 @@ BOOST_PYTHON_MODULE(libpat) {
 			"PythonProcessAsThread",
 			py::init<py::list>())
 		.def("wait", &PythonProcessAsThread::wait,
+			 py::return_value_policy<return_optional>())
+	;
+
+	py::class_<Queue, boost::noncopyable>("Queue", py::init<>())
+		.def("push", &Queue::push)
+		.def("pop", &Queue::pop)
+		.def("try_pop", &Queue::try_pop,
 			 py::return_value_policy<return_optional>())
 	;
 }
