@@ -6,8 +6,7 @@ CPPFLAGS += -std=c++2a
 SHLIBFLAGS += -fPIC -rdynamic -shared
 # -fno-gnu-unique
 LDLIBS += -ldl -ltbb -lboost_thread -lboost_system -lpthread 
-DEPS = src/DynamicLib.cc src/util.cc src/DynamicLib.hh src/util.hh
-
+DEPS = src/dynamic_lib.cc src/util.cc src/dynamic_lib.hh src/util.hh cpython/python
 
 # copied from `make -p | grep '%: %.c$' -A 3`
 # this way, the executable ends in a known suffix
@@ -15,7 +14,7 @@ DEPS = src/DynamicLib.cc src/util.cc src/DynamicLib.hh src/util.hh
 %.exe: %.cc $(DEPS)
 	$(LINK.cc) $(filter %.cc,$^) $(CFLAGS) $(LOADLIBES) $(LDLIBS) -o $@
 
-%.so: %.cc $(DEPS) cpython/python
+%.so: %.cc $(DEPS)
 	$(CXX) $(CFLAGS) $(CPPFLAGS) $(TARGET_ARCH) $(SHLIBFLAGS) -o $@ $(filter %.cc,$^)
 
 python := env PYTHONPATH=${PWD}/cpython/Lib LD_LIBRARY_PATH=${PWD}/cpython ./cpython/python
@@ -57,7 +56,7 @@ cpython/python:
 	cd ..
 
 .PHONY: tests
-tests: src/exec_sharing.exe src/run_python2.so src/run_python2.exe src/libpat.so cpython/python
+tests: src/exec_sharing.exe src/run_python2.so src/run_python2.exe src/libpat.so
 	./tests/test1.sh && \
 	./tests/test2.sh && \
 	./tests/test3.sh && \

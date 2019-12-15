@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cassert>
 #include <filesystem>
+#include <functional>
 #include <random>
 #include <sstream>
 #include <string>
@@ -77,6 +78,61 @@ std::filesystem::path quick_tmp_copy(
 	 std::string marker = "foo",
 	 std::string suffix = "");
 void free_char_pptr(size_t length, char** pptr);
+std::string ptr2string(void* ptr);
+
+template <typename In, typename Out>
+std::vector<Out> map(const std::vector<In>& in, std::function<Out(const In&)> fn) {
+	std::vector<Out> out;
+	out.reserve(in.size());
+	return std::transform(in.cbegin(), in.cend(), out.begin(), fn);
+}
+
+// this class is for wrapping C APIs in objects that manage their own memory
+class unique_void_ptr {
+protected:
+	void* data;
+public:
+	unique_void_ptr(void* data_) { data = data_; };
+	unique_void_ptr(const unique_void_ptr& rhs) = delete;
+	unique_void_ptr(unique_void_ptr&& rhs) noexcept
+		: data(std::exchange(rhs.data, nullptr)) { }
+	~unique_void_ptr() { free(data); data = nullptr; }
+	unique_void_ptr& operator=(const unique_void_ptr& rhs) = delete;
+	unique_void_ptr& operator=(unique_void_ptr&& rhs) noexcept {
+		std::swap(data, rhs.data);
+		return *this;
+	}
+	void* operator*() { return data; }
+	const void* operator*() const { return data; }
+};
+class shared_void_ptr {
+protected:
+	void* data;
+public:
+	shared_void_ptr() : data(nullptr) {}
+	shared_void_ptr(void* data_) : data(data_) {}
+	void* operator*() { return data; }
+	const void* operator*() const { return data; }
+};
+
+template <typename Container>
+typename Container::value_type get_and_pop_front(Container& it) {
+	auto r = std::move(it.at(0));
+	it.pop_front();
+	return r;
+}
+
+template <typename Container>
+bool try_erase(Container& container, const typename Container::key_type& key) {
+	auto key_it = container.find(key);
+	if (key_it != container.end()) {
+		container.erase(key_it);
+		return true;
+	} else {
+		return false;
+	}
+}
+
 std::string ptr2string(void* ptr);
 
 #endif

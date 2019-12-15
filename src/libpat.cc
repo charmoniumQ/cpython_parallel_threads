@@ -13,7 +13,7 @@
 #define PY_VERSION_HEX 0x03700000
 #include <boost/python.hpp>
 
-#include "DynamicLib.hh"
+#include "dynamic_lib.hh"
 #include "util.hh"
 #include "python_so_path.cc"
 
@@ -24,7 +24,8 @@ class ProcessAsThread {
 private:
 	int argc;
 	char** argv;
-	DynamicLib lib;
+	std::string path;
+	dynamic_libs lib;
 	std::future<int> return_code;
 public:
 
@@ -35,7 +36,8 @@ public:
 	ProcessAsThread(const py::list& cmd)
 		: argc(len(cmd))
 		, argv(init_argv(argc, cmd))
-		, lib({quick_tmp_copy(argv[0], 10, "foo", ".so")})
+		, path(quick_tmp_copy(argv[0], 10, "foo", ".so"))
+		, lib(dynamic_libs::create({{path, {"main"}}})) 
 		, return_code(std::async(lib.get<int (*)(int, char**)>("main"), argc, argv))
 	{ }
 
@@ -84,14 +86,16 @@ class PythonProcessAsThread {
 private:
 	int argc;
 	wchar_t** argv;
-	DynamicLib lib;
+	dynamic_libs lib;
 	std::future<int> return_code;
 public:
 
 	PythonProcessAsThread(const py::list& cmd)
 		: argc(len(cmd))
 		, argv(init_argv(argc, cmd))
-		, lib({quick_tmp_copy(get_python_so(), 10, "foo", ".so")})
+		, lib(dynamic_libs::create({
+			{quick_tmp_copy(get_python_so(), 10, "foo", ".so"), {"Py_Main"}},
+		}))
 		, return_code(std::async(lib.get<int (*)(int, wchar_t**)>("Py_Main"), argc, argv))
 	{ }
 

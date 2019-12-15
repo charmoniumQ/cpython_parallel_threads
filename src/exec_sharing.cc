@@ -4,11 +4,19 @@
 #include <algorithm>
 #include <execution>
 
-#include "DynamicLib.hh"
+#include "dynamic_lib.hh"
 #include "util.hh"
 
 int run_main(const std::vector<std::string>& args) {
-	DynamicLib lib {quick_tmp_copy(args[0])};
+	dynamic_libs lib = dynamic_libs::create({
+		// {"/lib64/ld-linux-x86-64.so.2", {}},
+		// {"/lib/x86_64-linux-gnu/libc.so.6", {}},
+		// {"/lib/x86_64-linux-gnu/libm.so.6", {}},
+		// {"/lib/x86_64-linux-gnu/libgcc_s.so.1", {}},
+		// {"/usr/lib/x86_64-linux-gnu/libstdc++.so.6", {}},
+		{"/lib/x86_64-linux-gnu/libdl.so.2", {}},
+		{args[0], {"main"}},
+	});
 
 	typedef int(*main_method)(int, char**);
 	main_method this_main = lib.get<main_method>("main");
@@ -30,7 +38,7 @@ auto maybe_parallel_for_each(Policy policy, Iterator begin, Iterator end, F f) {
 	case Policy::    unseq: return std::for_each(std::execution::    unseq, begin, end, f);
 	case Policy::      seq: return std::for_each(std::execution::      seq, begin, end, f);
 	case Policy::  par_seq: return std::for_each(std::execution::par      , begin, end, f);
-  }
+	}
 }
 
 int main(int argc, char* const argv[]) {

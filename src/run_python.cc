@@ -2,17 +2,11 @@
 #include <iostream>
 #include <cstdio>
 #include <cstring>
+#include <string>
 
-#include "DynamicLib.hh"
+#include "dynamic_lib.hh"
 #include "util.hh"
 #include "python_so_path.cc"
-
-template <typename T>
-T get_and_pop_front(std::deque<T>& it) {
-	T r = std::move(it[0]);
-	it.pop_front();
-	return r;
-}
 
 int main(int argc, char** argv) {
 	int ret = 0;
@@ -21,7 +15,17 @@ int main(int argc, char** argv) {
 
 	std::string prog_name = get_and_pop_front(args);
 
-	DynamicLib lib {quick_tmp_copy(get_python_so())};
+	dynamic_libs lib = dynamic_libs::create({
+		{get_python_so(), {
+			"Py_DecodeLocale",
+			"Py_SetProgramName",
+			"Py_Initialize",
+			"PyRun_SimpleFile",
+			"Py_FinalizeEx",
+			"PyMem_RawFree",
+			"PyRun_SimpleString",
+		}},
+	});
 
 	auto Py_DecodeLocale = lib.get
 		<wchar_t* (*)(const char*, size_t *)>
@@ -43,7 +47,7 @@ int main(int argc, char** argv) {
 		("PyMem_RawFree");
 	auto PyRun_SimpleString = lib.get
 		<int (*)(const char*)>
-		("PyMem_RawFree");
+		("PyRun_SimpleString");
 
 	std::string path = get_and_pop_front(args);
 

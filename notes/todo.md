@@ -37,3 +37,5 @@
 - Make portable
 
     Right now, I hardcode path to Python so.
+
+- Remove mutex in src/dynamic_lib.cc. I don't think it is necessary.

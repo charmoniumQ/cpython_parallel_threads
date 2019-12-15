@@ -1,3 +1,6 @@
+#include <utility>
+#include <cstdlib>
+
 #include "util.hh"
 
 std::string random_string(size_t length) {
@@ -20,12 +23,13 @@ std::filesystem::path quick_tmp_copy(const std::filesystem::path& file, size_t s
 	path dir = temp_directory_path() / marker;
 	create_directory(dir);
 	path tmp_file = dir / (random_string(size) + suffix);
-	try {
-		create_hard_link(file, tmp_file);
-	} catch(const filesystem_error& e) {
-		assert(static_cast<std::string>(file).substr(0, 4) != "/tmp");
+	// TODO: accelerate copying with hard-linking
+	// try {
+	// 	create_hard_link(file, tmp_file);
+	// } catch(const filesystem_error& e) {
+	// 	assert(static_cast<std::string>(file).substr(0, 4) != "/tmp");
 		copy_file(file, tmp_file);
-	}
+	// }
 	return tmp_file;
 }
 

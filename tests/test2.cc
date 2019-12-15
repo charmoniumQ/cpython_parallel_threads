@@ -1,16 +1,24 @@
-#include <unistd.h>
+#include <cassert>
 #include <iostream>
-#include <thread>
 #include <random>
 #include <sstream>
+#include <sys/syscall.h>
+#include <thread>
+#include <unistd.h>
 
-static void ctor(void) __attribute__((constructor));
-static void ctor(void) {
-	std::cout << "ctor\n";
-}
-static void dtor(void) __attribute__((destructor));
-static void dtor(void) {
-	std::cout << "dtor\n";
+namespace {
+	struct initializer {
+		initializer() {
+			// using \n instead of std::endl makes it less likely that the
+			// newline gets mangled with the output of other threads.
+			std::cout << "ctor\n";
+		}
+
+		~initializer() {
+			std::cout << "dtor\n";
+		}
+	};
+	static initializer i;
 }
 
 int main() {
@@ -19,7 +27,17 @@ int main() {
 
 	std::ostringstream ss;
 	ss << "pid " << getpid() << "\n";
-	ss << "tid " << std::this_thread::get_id() << "\n";
+
+	// this doesn't work
+	// ss << "tid " << std::this_thread::get_id() << "\n";
+
+#ifdef SYS_gettid
+	// because gettid
+	pid_t tid = syscall(SYS_gettid);
+#else
+#error "SYS_gettid unavailable on this system"
+#endif
+	ss << "tid " << tid << "\n";
 	ss << "rand " << dist(rd) << "\n";
 	std::cout << ss.str();
 	return 0;
