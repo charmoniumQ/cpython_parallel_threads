@@ -6,7 +6,9 @@
 #include "util.hh"
 
 int main(int argc, char** argv) {
-	std::string python_so = "/usr/lib/x86_64-linux-gnu/libpython3.7m.so";
+	std::string python_so =
+		// "/home/sam/Downloads/cpython/libpython3.8d.so";
+		"/usr/lib/x86_64-linux-gnu/libpython3.7m.so";
 	// TODO: get this value programatically by
 	// $ sbin/ldconfig -p | grep -o '\S*libpython3.7m.so$'
 	// overridable by env var

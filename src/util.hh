@@ -77,5 +77,6 @@ std::filesystem::path quick_tmp_copy(
 	 std::string marker = "foo",
 	 std::string suffix = "");
 void free_char_pptr(size_t length, char** pptr);
+std::string ptr2string(void* ptr);
 
 #endif

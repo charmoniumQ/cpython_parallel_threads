@@ -35,3 +35,9 @@ void free_char_pptr(size_t length, char** pptr) {
 	}
 	delete[] pptr;
 }
+
+std::string ptr2string(void* ptr) {
+	std::stringstream strm;
+	strm << ptr;
+	return strm.str();
+}

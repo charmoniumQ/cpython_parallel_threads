@@ -18,7 +18,7 @@ DEPS = src/DynamicLib.cc src/util.cc src/DynamicLib.hh src/util.hh
 %.so: %.cc $(DEPS)
 	$(CXX) $(CFLAGS) $(CPPFLAGS) $(TARGET_ARCH) $(SHLIBFLAGS) -o $@ $(filter %.cc,$^)
 
-%.cpython-37m-x86_64-linux-gnu.so: %.cc $(DEPS)
+src/libpat.so: src/libpat.cc $(DEPS)
 	$(CXX) -shared -Wl,-soname,$(shell basename $@) -fPIC  $(CFLAGS) $(CPPFLAGS) $(TARGET_ARCH) $(shell python3-config --cflags --ldflags) -lboost_python37 $(LDLIBS) -o $@ $(filter %.cc,$^)
 # special case, because I use Boost.Python
 # https://stackoverflow.com/a/3881479/1078199
@@ -44,7 +44,7 @@ clean:
 	true
 
 .PHONY: tests
-tests: src/exec_sharing.exe src/run_python2.so src/run_python2.exe src/libpat.cpython-37m-x86_64-linux-gnu.so
+tests: src/exec_sharing.exe src/run_python2.so src/run_python2.exe src/libpat.so
 	./tests/test1.sh && \
 	./tests/test2.sh && \
 	./tests/test3.sh && \

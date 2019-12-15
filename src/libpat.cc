@@ -16,7 +16,9 @@
 #include "DynamicLib.hh"
 #include "util.hh"
 
-std::string python_so = "/usr/lib/x86_64-linux-gnu/libpython3.7m.so";
+std::string python_so =
+	// "/home/sam/Downloads/cpython/libpython3.8d.so";
+	"/usr/lib/x86_64-linux-gnu/libpython3.7m.so";
 
 namespace py = boost::python;
 namespace bc = boost::concurrent;
@@ -29,6 +31,10 @@ private:
 	std::future<int> return_code;
 public:
 
+	// I don't own cmd or its elements.
+	// I just borrow them for the duration of this constructor.
+	// I copy the data out of them and never touch them again.
+	// So no need to incref/decref cmd or its elements.
 	ProcessAsThread(const py::list& cmd)
 		: argc(len(cmd))
 		, argv(init_argv(argc, cmd))
@@ -135,42 +141,68 @@ public:
 
 class Queue {
 private:
-	bc::sync_queue<py::object> _queue;
+	using queue_t = bc::sync_queue<py::object>;
+	queue_t* queue;
+	const bool owned;
 
 public:
+
+	// Note on thread-safety:
+	// If this queue is shared between threads
+	// deepcopy objects before pushing them.
+	// This way, all objects are referenced from only one thread.
 	void push(py::object obj) {
-		// TODO: assess if I need this
+		// You can keep your existing references to obj.
+		// But I need one too.
 		py::incref(obj.ptr());
-		// I think I need to make sure Python doesn't delete this,
-		// even if it is not referenced in user code.
-		// Consider it referenced here.
-		_queue.wait_push(obj);
+		// This ensures Python doesn't delete it
+		// even when user-code has no references to obj.
+		// (I still do)
+
+		// In a multi-threaded environment, refcount will be equal to one
+		// because you made a copy, pushed it, (implicitly) threw it away, and decref'ed.
+
+		queue->wait_push(obj);
 	}
+
 	py::object pop() {
-		// TODO: assess if I need this
-		// py::decref(obj.ptr());
-		// I think I already increfed on push
-		// so obj's ref_count = references_already_in_user_code + 1
-		// and I am going to return it.
-		// So I think this is good.
-		return _queue.pull();
+		// Returning an owned object.
+		// It is live because I inref'ed when I inserted.
+		// Python is responsible for calling decref.
+		// I think this happens when the var holding this result in user-code goes out of scope
+		return queue->pull();
 	}
+
 	py::object try_pop() {
 		py::object obj;
-		bool success = _queue.try_pull(obj) == bc::queue_op_status::success;
+		bool success = queue->try_pull(obj) == bc::queue_op_status::success;
 		if (success) {
-			// TODO: assess if I need this
-			// py::decref(obj.ptr());
-			// I think I already increfed on push
-			// so obj's ref_count = references_already_in_user_code + 1
-			// and I am going to return it.
-			// So I think this is good.
+			// See reference-semantics of pop
 			return obj;
 		}
 		else {
 			return py::object{};
 		}
 	}
+
+	std::string handle() {
+		return ptr2string(queue);
+	}
+
+	static Queue from_handle(const std::string& re) {
+		return {reinterpret_cast<queue_t*>(std::stoi(re))};
+	}
+
+	Queue() : queue{new queue_t{}}, owned{true} {}
+
+	~Queue() {
+		if (owned) {
+			delete queue;
+		}
+	}
+
+private:
+	Queue(queue_t* _queue) : queue{_queue}, owned{false} {}
 };
 
 BOOST_PYTHON_MODULE(libpat) {
@@ -190,5 +222,7 @@ BOOST_PYTHON_MODULE(libpat) {
 		.def("push", &Queue::push)
 		.def("pop", &Queue::pop)
 		.def("try_pop", &Queue::try_pop)
+		.add_property("handle", &Queue::handle)
+		.def("from_handle", &Queue::from_handle).staticmethod("from_handle")
 	;
 }

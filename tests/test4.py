@@ -7,7 +7,11 @@ procs = [
     libpat.ProcessAsThread(['./tests/test1_b.so']),
     libpat.PythonProcessAsThread(['python', '-c', 'print(248)']),
     libpat.PythonProcessAsThread(['python', '-c', 'print(358)']),
+    # libpat.PythonProcessAsThread(['python', '-c', 'import sys;sys.path.insert(0, "src");import libpat']),
 ]
+# def printy(x):
+#     print(x)
+#     return x
 assert all(proc.wait(1.0) == 0 for proc in procs)
 
 queue = libpat.Queue()
