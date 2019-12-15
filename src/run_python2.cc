@@ -1,18 +1,17 @@
 #include <cstring>
 #include <cstdlib>
 #include <iostream>
+#include <string>
 
 #include "DynamicLib.hh"
 #include "util.hh"
+#include "python_so_path.cc"
 
 int main(int argc, char** argv) {
-	std::string python_so =
-		// "/home/sam/Downloads/cpython/libpython3.8d.so";
-		"/usr/lib/x86_64-linux-gnu/libpython3.7m.so";
 	// TODO: get this value programatically by
 	// $ sbin/ldconfig -p | grep -o '\S*libpython3.7m.so$'
 	// overridable by env var
-	DynamicLib lib {quick_tmp_copy(python_so)};
+	DynamicLib lib {quick_tmp_copy(get_python_so())};
 
 	auto Py_Main = lib.get
 		<int (*)(int, wchar_t**)>
