@@ -85,7 +85,7 @@ public:
 class PythonProcessAsThread {
 private:
 	int argc;
-	wchar_t** argv;
+	char** argv;
 	dynamic_libs lib;
 	std::future<int> return_code;
 public:
@@ -94,18 +94,18 @@ public:
 		: argc(len(cmd))
 		, argv(init_argv(argc, cmd))
 		, lib(dynamic_libs::create({
-			{quick_tmp_copy(get_python_so(), 10, "foo", ".so"), {"Py_Main"}},
+			{quick_tmp_copy(get_python_so(), 10, "foo", ".so"), {"Py_BytesMain"}},
 		}))
-		, return_code(std::async(lib.get<int (*)(int, wchar_t**)>("Py_Main"), argc, argv))
+		, return_code(std::async(lib.get<int (*)(int, char**)>("Py_BytesMain"), argc, argv))
 	{ }
 
-	static wchar_t** init_argv(int argc, const py::list& cmd) {
-		wchar_t** out = new wchar_t*[argc];
+	static char** init_argv(int argc, const py::list& cmd) {
+		char** out = new char*[argc];
 		for (int i = 0; i < argc; ++i) {
 			char const* arg = py::extract<char const*>(cmd[i]);
-			int arg_size = strlen(arg) * 4;
-			out[i] = new wchar_t[arg_size];
-			mbstowcs(out[i], arg, arg_size);
+			int arg_size = strlen(arg) + 1;
+			out[i] = new char[arg_size];
+			memcpy(out[i], arg, arg_size);
 		}
 		return out;
 	}

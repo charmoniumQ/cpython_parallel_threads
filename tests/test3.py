@@ -1,5 +1,5 @@
 import os
-# import random
+import random
 import threading
 
 random.seed(0)
