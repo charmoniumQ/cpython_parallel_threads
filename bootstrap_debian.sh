@@ -29,4 +29,7 @@ sudo apt install -y \
 	 git \
 	 time \
 	 python3.8-dev \
+	 linux-perf \
 	 && true
+
+echo 1 | sudo tee /proc/sys/kernel/perf_event_paranoid

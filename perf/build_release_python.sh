@@ -41,3 +41,5 @@ if [ ! -f src/libpat.so ]; then
 		src/libpat.cc src/DynamicLib.cc src/util.cc \
 		-o src/libpat.so
 fi
+
+lscpu > lscpu
