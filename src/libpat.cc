@@ -11,12 +11,12 @@
 
 #include <boost/thread/sync_queue.hpp>
 #define PY_VERSION_HEX 0x03700000
+#include <pyconfig.h>
 #include <boost/python.hpp>
 
 #include "DynamicLib.hh"
 #include "util.hh"
-
-std::string python_so = "/usr/lib/x86_64-linux-gnu/libpython3.7m.so";
+#include "get_python_so.cc"
 
 namespace py = boost::python;
 namespace bc = boost::concurrent;
@@ -88,7 +88,7 @@ public:
 	PythonProcessAsThread(const py::list& cmd)
 		: argc(len(cmd))
 		, argv(init_argv(argc, cmd))
-		, lib({quick_tmp_copy(python_so, 10, "foo", ".so")})
+		, lib({quick_tmp_copy(get_python_so(), 10, "foo", ".so")})
 		, return_code(std::async(lib.get<int (*)(int, wchar_t**)>("Py_Main"), argc, argv))
 	{ }
 

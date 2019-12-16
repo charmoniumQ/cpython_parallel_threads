@@ -7,32 +7,88 @@
 \begin{document}
 %-------------------------------------------------------------------------------
 
-\title{\Large \bf Formatting Submissions for a USENIX Conference:\\
-  An (Incomplete) Example}
+\title{\Large \bf An Easy and Safe Implementation of Truly Parallel Threads in CPython}
 
 \author{
 {\rm Samuel Grayson}\\
 University of Illinois at Urbana-Champaign
 }
 
+\newcommand{\citeme}{ }
 
 %-------------------------------------------------------------------------------
 \begin{abstract}
-%-------------------------------------------------------------------------------
-Your abstract text goes here. Just a few facts. Whet our appetites.
-Not more than 200 words, if possible, and preferably closer to 150.
+% -------------------------------------------------------------------------------
+
+  Mutually trusting processes can be safely run in the same address-space (effectively running \textit{processes-as-threads}) without having source-level changes.
+  This has compelling performance improvements for programs that can be realized with very little work.
+  Some programs such as Python do not support parallel threads, and this may be the only way to unlock high performance on multicore architecture.
+
+  I can implement this abstraction of processes-as-threads without modifying the underlying process's code or the kernel.
+  In just one semester I have implemented a prototype of the process-as-threads abstraction for CPython, which allows it to run parallel threads safely.
+  I demonstrate massive performance benefits from this approach with comparatively little work.
 \end{abstract}
 
 %-------------------------------------------------------------------------------
-\section{Introduction}
+\section{Motivation}
 %-------------------------------------------------------------------------------
 
-A paragraph of text goes here. Lots of text. Plenty of interesting
-text. Text text text text text text text text text text text text text
-text text text text text text text text text text text text text text
-text text text text text text text text text text text text text text
-text text text text text text text.
-More fascinating text. Features galore, plethora of promises.
+Modern systems need distinct virtual-to-physical mappings (\textit{address space}) for several reasons. While extremely important in the general case, 
+I argue that there is a specific case where we can relax them for the sake of performance. Multithreading and virtual memory-aliasing (\texttt{mmap}) already relax this constraint in \textit{non}-memory-safe languages, which is more dangerous than my proposal.
+
+\begin{description}
+\item[Stability]
+  One malfunctioning process should not be able to cause other processes to malfunction\citeme.
+  When a programmer wants to parallelize code, they implicitly trust themselves, so the security of processes is not necessary here\citeme.
+\item[Security]
+  Processes do not necessarily trust each other with their volatile data\citeme.
+  In a memory-safe programming languages, direct memory access is not possible, eliminating this class of bugs\citeme.
+\end{description}
+
+On the other hand, running in the same address space has important performance benefits:
+
+\begin{description}
+\item[Reduced context-switching time]
+  When the OS switches from one process to another it has to flush the TLB, file-descriptor table, and other per-process resources;
+  When switching between threads, this state is shared\citeme.
+\item[Reduced communication/synchronization time]
+  Inter-process communication (such as Unix pipe) has to copy data into and out-from the kernel;
+  Inter-thread communication can leveraged the shared memory-space copying once or zero times (sending a reference)\citeme.
+\item[Reduced memory fragmentation]
+  Huge pages are intended to extend the reach of the TLB, however this faces implementation problems.
+  If each process gets a huge page, physical memory runs out, even though each process might only be using a fraction of its page.
+  Multiple threads however could share a huge page between themselves\citeme.
+\end{description}
+
+This workload is becoming increasingly important due to the limitations of single-core performance and the move to multi-core\citeme.
+Python is often used for big-data applications, with frameworks such as Spark\citeme and Dask\citeme.
+
+Python cannot support parallel multithreading because it is not threadsafe\citeme.
+There is a \textit{Global Interpreter Lock} (GIL) ensuring only one thread of Python bytecode is executing at a time\citeme.
+It has a \texttt{threading}\citeme module, but it neutered by the GIL.
+If the Python bytecode calls into an external extension or waits on an OS event, then other Python bytecode can execute, giving us \textit{concurrency} but not \textit{parallelism}\citeme.
+Concurrency accelerates I/O-bound tasks, but does not accelerate CPU-bound tasks.
+The state-of-the-art for Python is to use multiple processes (\texttt{multiprocessing}\citeme module)\citeme.
+While this achieves parallelism, it leaves a lot of performance on the table (slow context-switching, slow communcation, and poor memory fragmentation).
+
+Many other interpreted-languages, such as Ruby, have a GIL as well.
+In these lanuages, neither normal processes nor normal threads can provide the benefits of running in the same address-space.
+
+%-------------------------------------------------------------------------------
+\section{Process-as-Threads Programming Model}
+%-------------------------------------------------------------------------------
+
+
+
+However the process-as-threads abstraction can provide this benefit without modifying CPython nor the OS kernel at all.
+Compare this to other proposals which involve a massive overhaul of the CPython interpreter--a so-called `GIL-ectomy'.
+
+  In just one semester I have implemented a prototype of the process-as-threads abstraction.
+  I have applied it parelellizing Python with extremely positive performance results.
+  The degree of performance improvement I could get on a project as mature as Python in one semseter by myself is extremely promising.
+  My vision is that with one more year I could develop a polished process-as-threads which could parallelize any programming language interpreter without any change to process-as-threads or the language.
+  Rewriting an interpreter using multithreading natively is going to be the best long-run move, but this provides close to the same benefit with much less work.
+  It could even apply to run two different lanuage interpreters in the same addres-space, accelerating polyglot applications (i.e. a system utilizing code in multiple languages simultaneously).
 
 %-------------------------------------------------------------------------------
 \section{Footnotes, Verbatim, and Citations}

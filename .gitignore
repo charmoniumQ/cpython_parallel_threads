@@ -11,4 +11,6 @@ auto/
 *.bbl
 *.exe
 
+*.csv
+
 __pycache__/
