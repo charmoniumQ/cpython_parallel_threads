@@ -4,7 +4,7 @@
 
 #include "dynamic_lib.hh"
 #include "util.hh"
-#include "python_so_path.cc"
+#include "python_so_path.hh"
 
 int main(int argc, char** argv) {
 	int ret = 0;

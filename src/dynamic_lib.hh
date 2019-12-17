@@ -10,7 +10,7 @@ class dynamic_libs;
 
 class dynamic_lib : protected unique_void_ptr {
 private:
-	void* create(const std::string& path, const std::string& name, Lmid_t ns);
+	void* create(const std::string& path, Lmid_t ns);
 	std::string name;
 	friend class dynamic_libs;
 public:

@@ -8,11 +8,15 @@ std::string random_string(size_t length) {
 	    "abcdefghijklmnopqrstuvwxyz"
 	    "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 	static std::random_device rd;
-	static std::uniform_int_distribution<size_t> pick{0, sizeof(chrs) - 1};
+	static std::uniform_int_distribution<size_t> pick{0, sizeof(chrs) - 2};
+	//   -1 to exclude null byte
+	//   -1 because std::uniform_int_distribution is inclusive of its endpoint
+	// ----
+	//   -2
 
-	// Note that {length, '\0'} tries to use an initializer list
+	// Note that {length, ' '} tries to use an initializer list
 	// which is not what I want
-	std::string str(length, '\0');
+	std::string str(length, ' ');
     std::generate_n(str.begin(), length, []{ return chrs[pick(rd)]; });
 	return str;
 }

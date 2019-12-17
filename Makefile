@@ -6,7 +6,7 @@ CPPFLAGS += -std=c++2a
 SHLIBFLAGS += -fPIC -rdynamic -shared
 # -fno-gnu-unique
 LDLIBS += -ldl -ltbb -lboost_thread -lboost_system -lpthread 
-DEPS = src/dynamic_lib.cc src/util.cc src/dynamic_lib.hh src/util.hh cpython/python
+DEPS = src/dynamic_lib.cc src/util.cc src/dynamic_lib.hh src/util.hh cpython/python src/python_so_path.hh
 
 # copied from `make -p | grep '%: %.c$' -A 3`
 # this way, the executable ends in a known suffix
@@ -38,21 +38,23 @@ src/libpat.so: src/libpat.cc $(DEPS)
 
 .PHONY: clean
 clean:
-	find . -name '*.log' -delete ; \
-	find . -name '*.exe' -delete ; \
-	find . -name '*.o'   -delete ; \
-	find . -name '*.so'  -delete ; \
+	find src   -name '*.{log,o,exe,so}' -delete ; \
+	find tests -name '*.{log,o,exe,so}' -delete ; \
 	true
 
 .PHONY: python_clean
-python_clean:
+cpython_clean:
 	cd cpython && $(MAKE) clean && rm -f python && cd ..
 
-cpython/python:
+cpython/Makefile:
 	cd cpython && \
 	git submodule update --init && \
 	./configure --enable-shared --with-pydebug && \
-	$(MAKE) -s && \
+	cd ..
+
+cpython/python: cpython/Makefile
+	cd cpython && \
+	$(MAKE) -s -j 2 && \
 	cd ..
 
 .PHONY: tests

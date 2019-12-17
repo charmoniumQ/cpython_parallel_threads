@@ -39,3 +39,9 @@
     Right now, I hardcode path to Python so.
 
 - Remove mutex in src/dynamic_lib.cc. I don't think it is necessary.
+
+- Test both perf cases with ./src/run_python2.exe or CPython
+
+    Currently, importing is broken in PaTs and embedded Python; Thus I
+    have to use CPython to run the multiprocessing and threading
+    tests, but I use ./src/run_python2.exe to run my tests.

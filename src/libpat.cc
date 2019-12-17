@@ -8,6 +8,7 @@
 #include <thread>
 #include <type_traits>
 #include <vector>
+#include <iostream>
 
 #include <boost/thread/sync_queue.hpp>
 #define PY_VERSION_HEX 0x03700000
@@ -15,7 +16,7 @@
 
 #include "dynamic_lib.hh"
 #include "util.hh"
-#include "python_so_path.cc"
+#include "python_so_path.hh"
 
 namespace py = boost::python;
 namespace bc = boost::concurrent;
@@ -24,7 +25,6 @@ class ProcessAsThread {
 private:
 	int argc;
 	char** argv;
-	std::string path;
 	dynamic_libs lib;
 	std::future<int> return_code;
 public:
@@ -36,8 +36,7 @@ public:
 	ProcessAsThread(const py::list& cmd)
 		: argc(len(cmd))
 		, argv(init_argv(argc, cmd))
-		, path(quick_tmp_copy(argv[0], 10, "foo", ".so"))
-		, lib(dynamic_libs::create({{path, {"main"}}})) 
+		, lib(dynamic_libs::create({{argv[0], {"main"}}}))
 		, return_code(std::async(lib.get<int (*)(int, char**)>("main"), argc, argv))
 	{ }
 
@@ -86,17 +85,14 @@ class PythonProcessAsThread {
 private:
 	int argc;
 	char** argv;
-	dynamic_libs lib;
 	std::future<int> return_code;
+	
 public:
 
 	PythonProcessAsThread(const py::list& cmd)
 		: argc(len(cmd))
 		, argv(init_argv(argc, cmd))
-		, lib(dynamic_libs::create({
-			{quick_tmp_copy(get_python_so(), 10, "foo", ".so"), {"Py_BytesMain"}},
-		}))
-		, return_code(std::async(lib.get<int (*)(int, char**)>("Py_BytesMain"), argc, argv))
+		, return_code(std::async(run, argc, argv))
 	{ }
 
 	static char** init_argv(int argc, const py::list& cmd) {
@@ -108,6 +104,33 @@ public:
 			memcpy(out[i], arg, arg_size);
 		}
 		return out;
+	}
+
+	static int run(int argc, char** argv) {
+		int ret = 0;
+		dynamic_libs lib = dynamic_libs::create({
+			{get_python_so(), {
+				"Py_BytesMain",
+				"Py_InitializeEx",
+				"Py_FinalizeEx",
+			}},
+		});
+
+		auto Py_InitializeEx = lib.get
+			<void(*)(int)>
+			("Py_InitializeEx");
+		auto Py_FinalizeEx = lib.get
+			<int(*)()>
+			("Py_FinalizeEx");
+		auto Py_BytesMain = lib.get
+			<int(*)(int, char**)>
+			("Py_BytesMain");
+
+		Py_InitializeEx(0);
+		ret |= Py_BytesMain(argc, argv);
+		ret |= Py_FinalizeEx();
+
+		return ret;
 	}
 
 	~PythonProcessAsThread() {
